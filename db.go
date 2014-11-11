@@ -79,8 +79,9 @@ func PopEvent() (*Event, error) {
 				Branch: readBack["branch"].(string),
 				Commit: readBack["commit"].(string),
 			},
+			Domain: readBack["domain"].(string),
 			Status: StatusRunning,
-			Log:    readBack["log"].([]byte),
+			Log:    []byte(readBack["log"].(string)),
 		}
 
 		// Save it back to the database marked as running
@@ -96,12 +97,12 @@ func PopEvent() (*Event, error) {
 	return nil, nil
 }
 
-func GetEvent(owner, repo, branch, commit string) (*Event, error) {
+func GetEvent(domain, owner, repo, branch, commit string) (*Event, error) {
 	Mux.Lock()
 	defer Mux.Unlock()
 
 	var query interface{}
-	json.Unmarshal([]byte(`[{"eq": "`+owner+`", "in": ["owner"]}, {"eq": "`+repo+`", "in": ["repo"]}, {"eq": "`+branch+`", "in": ["branch"]}, {"eq": "`+commit+`", "in": ["commit"]}]`), &query)
+	json.Unmarshal([]byte(`[{"eq": "`+domain+`", "in": ["domain"]}, {"eq": "`+owner+`", "in": ["owner"]}, {"eq": "`+repo+`", "in": ["repo"]}, {"eq": "`+branch+`", "in": ["branch"]}, {"eq": "`+commit+`", "in": ["commit"]}]`), &query)
 	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
 	if err := db.EvalQuery(query, Col, &queryResult); err != nil {
 		return nil, err
@@ -120,15 +121,19 @@ func GetEvent(owner, repo, branch, commit string) (*Event, error) {
 				Branch: readBack["branch"].(string),
 				Commit: readBack["commit"].(string),
 			},
+			Domain: readBack["domain"].(string),
 			Status: readBack["status"].(EventStatus),
-			Log:    readBack["log"].([]byte),
+			Log:    []byte(readBack["log"].(string)),
 		}, nil
 	}
-	panic("unreachable")
+
+	// No results
+	return nil, nil
 }
 
 func (e *Event) DBItem() map[string]interface{} {
 	return map[string]interface{}{
+		"domain": e.Domain,
 		"owner":  e.Owner,
 		"repo":   e.Repo,
 		"branch": e.Branch,
@@ -151,7 +156,7 @@ func (e *Event) Update() error {
 	// If we dont' know the ID, then get it from the DB
 	if e.ID == 0 {
 		var query interface{}
-		json.Unmarshal([]byte(`[{"eq": "`+e.Owner+`", "in": ["owner"]}, {"eq": "`+e.Repo+`", "in": ["repo"]}, {"eq": "`+e.Branch+`", "in": ["branch"]}, {"eq": "`+e.Commit+`", "in": ["commit"]}]`), &query)
+		json.Unmarshal([]byte(`[{"eq": "`+e.Domain+`", "in": ["domain"]}, {"eq": "`+e.Owner+`", "in": ["owner"]}, {"eq": "`+e.Repo+`", "in": ["repo"]}, {"eq": "`+e.Branch+`", "in": ["branch"]}, {"eq": "`+e.Commit+`", "in": ["commit"]}]`), &query)
 		queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
 		if err := db.EvalQuery(query, Col, &queryResult); err != nil {
 			return err

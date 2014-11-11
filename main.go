@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -85,5 +86,29 @@ func main() {
 }
 
 func handleUI(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello there")
+	defer r.Body.Close()
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 5 {
+		http.NotFound(w, r)
+		return
+	}
+	// Filter illigal characters
+	for _, part := range parts {
+		if strings.ContainsAny(part, " \"\\\b\f\n\r\t\v") {
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	event, err := GetEvent(parts[0], parts[1], parts[2], parts[3], parts[4])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if event == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	fmt.Fprintln(w, event.DBItem())
 }
