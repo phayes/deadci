@@ -56,9 +56,6 @@ func DBInit() {
 
 // Get a pending event, mark it as running
 func PopEvent() (*Event, error) {
-	Mux.Lock()
-	defer Mux.Unlock()
-
 	var query interface{}
 	json.Unmarshal([]byte(`[{"eq": "pending", "in": ["status"]}]`), &query)
 	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
@@ -98,9 +95,6 @@ func PopEvent() (*Event, error) {
 }
 
 func GetEvent(domain, owner, repo, branch, commit string) (*Event, error) {
-	Mux.Lock()
-	defer Mux.Unlock()
-
 	var query interface{}
 	json.Unmarshal([]byte(`[{"eq": "`+domain+`", "in": ["domain"]}, {"eq": "`+owner+`", "in": ["owner"]}, {"eq": "`+repo+`", "in": ["repo"]}, {"eq": "`+branch+`", "in": ["branch"]}, {"eq": "`+commit+`", "in": ["commit"]}]`), &query)
 	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
@@ -122,7 +116,7 @@ func GetEvent(domain, owner, repo, branch, commit string) (*Event, error) {
 				Commit: readBack["commit"].(string),
 			},
 			Domain: readBack["domain"].(string),
-			Status: readBack["status"].(EventStatus),
+			Status: EventStatus(readBack["status"].(string)),
 			Log:    []byte(readBack["log"].(string)),
 		}, nil
 	}
@@ -150,9 +144,6 @@ func (e *Event) Insert() error {
 }
 
 func (e *Event) Update() error {
-	Mux.Lock()
-	defer Mux.Unlock()
-
 	// If we dont' know the ID, then get it from the DB
 	if e.ID == 0 {
 		var query interface{}

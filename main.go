@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/codegangsta/cli"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/phayes/hookserve/hookserve"
 	"log"
 	"net/http"
@@ -11,9 +12,12 @@ import (
 	"time"
 )
 
-var OptCommand string = "./runtests"
+var OptCommand string = "ls -lah"
 
 func main() {
+
+	spew.Config.DisableMethods = true
+
 	DBInit()
 
 	app := cli.NewApp()
@@ -40,6 +44,7 @@ func main() {
 		githubreceive.Secret = c.String("secret")
 
 		http.Handle("/postreceive", githubreceive)
+		http.HandleFunc("/rerun/", handleReRun)
 		http.HandleFunc("/", handleUI)
 
 		go func() {
@@ -58,20 +63,26 @@ func main() {
 					Domain: "github.com", // For now we only support github
 					Status: StatusPending,
 				}
+				Mux.Lock()
 				err := event.Insert()
 				if err != nil {
 					log.Println(err)
 				}
+				Mux.Unlock()
 			default:
+				Mux.Lock()
 				event, err := PopEvent()
+				Mux.Unlock()
 				if err != nil {
 					log.Println(err)
 				} else if event != nil {
 					go func() {
 						status, err := event.Run()
+						Mux.Lock()
 						event.Log = append(event.Log, []byte("\n"+string(status)+":"+err.Error())...)
 						event.Status = status
 						event.Update()
+						Mux.Unlock()
 
 						// @@TODO: Log back to github
 					}()
@@ -89,7 +100,7 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 5 {
+	if len(parts) != 6 {
 		http.NotFound(w, r)
 		return
 	}
@@ -101,7 +112,7 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	event, err := GetEvent(parts[0], parts[1], parts[2], parts[3], parts[4])
+	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -110,5 +121,65 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(w, event.DBItem())
+	fmt.Fprintln(w, event.String())
+	if event.Status == StatusSuccess || event.Status == StatusFailed || event.Status == StatusFailedBoot {
+		fmt.Fprintln(w, "<a href='/rerun/"+event.Path()+"'>Rerun</a>")
+	}
+}
+
+func handleReRun(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 7 {
+		http.NotFound(w, r)
+		return
+	}
+	// Filter illigal characters
+	for _, part := range parts {
+		if strings.ContainsAny(part, " \"\\\b\f\n\r\t\v") {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	Mux.Lock()
+	event, err := GetEvent(parts[2], parts[3], parts[4], parts[5], parts[6])
+	Mux.Unlock()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if event == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if event.Status == StatusRunning {
+		http.Error(w, "Unable to re-run already running item", http.StatusInternalServerError)
+		return
+	}
+
+	// We have the event, run it again
+
+	// Save it back to the database marked as running
+	Mux.Lock()
+	event.Status = StatusRunning
+	event.Log = []byte("Retrying...\n")
+	err = Col.Update(event.ID, event.DBItem())
+	Mux.Unlock()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		status, err := event.Run()
+		Mux.Lock()
+		event.Log = append(event.Log, []byte("\n"+string(status)+":"+err.Error())...)
+		event.Status = status
+		event.Update()
+		Mux.Unlock()
+
+		// @@TODO: Log back to github
+	}()
+
+	http.Redirect(w, r, "/"+event.Path(), 303)
 }
