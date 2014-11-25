@@ -62,29 +62,41 @@ func main() {
 					Event:  commit,
 					Domain: "github.com", // For now we only support github
 					Status: StatusPending,
+					Time:   time.Now(),
 				}
-				Mux.Lock()
-				err := event.Insert()
+
+				// First check to see if the event already exists, and if it is reque it if it's not running
+				checkEvent, err := GetEvent(event.Domain, event.Owner, event.Repo, event.Branch, event.Commit)
 				if err != nil {
 					log.Println(err)
 				}
-				Mux.Unlock()
+				if checkEvent != nil {
+					// It's an old event, requeue it if we can
+					if checkEvent.Status != StatusRunning {
+						checkEvent.Status = StatusPending
+						err = checkEvent.Update()
+						if err != nil {
+							log.Println(err)
+						}
+					}
+				} else {
+					// It's a new event, insert it anew
+					err = event.Insert()
+					if err != nil {
+						log.Println(err)
+					}
+				}
 			default:
-				Mux.Lock()
 				event, err := PopEvent()
-				Mux.Unlock()
 				if err != nil {
 					log.Println(err)
 				} else if event != nil {
 					go func() {
 						status, err := event.Run()
-						Mux.Lock()
-						event.Log = append(event.Log, []byte("\n"+string(status)+":"+err.Error())...)
-						event.Status = status
-						event.Update()
-						Mux.Unlock()
-
-						// @@TODO: Log back to github
+						err = event.Report(status, err)
+						if err != nil {
+							log.Println(err)
+						}
 					}()
 				} else {
 					time.Sleep(50 * time.Millisecond)
@@ -142,9 +154,7 @@ func handleReRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	Mux.Lock()
 	event, err := GetEvent(parts[2], parts[3], parts[4], parts[5], parts[6])
-	Mux.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -160,11 +170,9 @@ func handleReRun(w http.ResponseWriter, r *http.Request) {
 	// We have the event, run it again
 
 	// Save it back to the database marked as running
-	Mux.Lock()
 	event.Status = StatusRunning
 	event.Log = []byte("Retrying...\n")
-	err = Col.Update(event.ID, event.DBItem())
-	Mux.Unlock()
+	event.Update()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -172,13 +180,10 @@ func handleReRun(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		status, err := event.Run()
-		Mux.Lock()
-		event.Log = append(event.Log, []byte("\n"+string(status)+":"+err.Error())...)
-		event.Status = status
-		event.Update()
-		Mux.Unlock()
-
-		// @@TODO: Log back to github
+		err = event.Report(status, err)
+		if err != nil {
+			log.Println(err)
+		}
 	}()
 
 	http.Redirect(w, r, "/"+event.Path(), 303)

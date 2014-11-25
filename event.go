@@ -6,23 +6,23 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
-type EventStatus string
-
 var (
-	StatusPending    EventStatus = "pending"
-	StatusRunning    EventStatus = "running"
-	StatusSuccess    EventStatus = "success"
-	StatusFailed     EventStatus = "failed"
-	StatusFailedBoot EventStatus = "failed-boot"
+	StatusPending    = "pending"
+	StatusRunning    = "running"
+	StatusSuccess    = "success"
+	StatusFailed     = "failed"
+	StatusFailedBoot = "failed-boot"
 )
 
 type Event struct {
 	hookserve.Event
 	ID     int
+	Time   time.Time
 	Domain string
-	Status EventStatus
+	Status string
 	Log    []byte
 }
 
@@ -31,16 +31,17 @@ func (e *Event) Path() string {
 }
 
 func (e *Event) String() string {
-	out := "domain: " + e.Domain + "\n"
+	out := "time:   " + e.Time.String() + "\n"
+	out += "domain: " + e.Domain + "\n"
 	out += e.Event.String()
-	out += "status: " + string(e.Status) + "\n\n"
+	out += "status: " + e.Status + "\n\n"
 	out += string(e.Log)
 	return out
 }
 
 // Run a test.
 // This should be done inside a goroutine
-func (e *Event) Run() (EventStatus, error) {
+func (e *Event) Run() (string, error) {
 	if e.Status != StatusRunning {
 		panic("Event should have it status set to `running` before calling Run()")
 	}
@@ -124,9 +125,7 @@ func (e *Event) Run() (EventStatus, error) {
 			}
 		}
 		e.Log = append(e.Log, stderrbuff[:n]...)
-		Mux.Lock()
 		e.Update()
-		Mux.Unlock()
 		if done {
 			break
 		}
@@ -138,4 +137,17 @@ func (e *Event) Run() (EventStatus, error) {
 	} else {
 		return StatusSuccess, nil
 	}
+}
+
+func (e *Event) Report(status string, err error) error {
+	if err != nil {
+		e.Log = append(e.Log, []byte("\n"+status+":"+err.Error())...)
+	} else {
+		e.Log = append(e.Log, []byte("\n"+status)...)
+	}
+
+	e.Status = status
+	return e.Update()
+
+	// @@TODO: Log back to github
 }

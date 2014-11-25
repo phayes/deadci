@@ -1,163 +1,110 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/HouzuoGuo/tiedot/db"
-	"github.com/phayes/hookserve/hookserve"
+	"database/sql"
+	"errors"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
+	//"github.com/phayes/hookserve/hookserve"
 	"sync"
 )
 
+const tableDef = `(
+	'id' INTEGER PRIMARY KEY AUTOINCREMENT,
+	'time' timestamp default CURRENT_TIMESTAMP,
+	'status' text NOT NULL,
+	'domain' text NOT NULL,
+	'owner' text NOT NULL,
+	'repo' text NOT NULL,
+	'branch' text NOT NULL,
+	'commit' text NOT NULL,
+	'log' blob
+)`
+
 var (
-	Dir string = "/tmp/MyDatabase"
-	DB  *db.DB
-	Col *db.Col
-	Mux sync.Mutex
+	DBDir string = "/tmp/MyDatabase"
+	DB    *sqlx.DB
+	Mux   sync.Mutex
 )
 
 // Bootstrap database
 func DBInit() {
-	DB, err := db.OpenDB(Dir)
-	if err != nil {
-		panic(err)
-	}
-	Col = DB.Use("events")
-	if Col == nil {
-		err := DB.Create("events")
-		if err != nil {
-			panic(err)
-		}
-		Col = DB.Use("events")
-		if Col == nil {
-			panic("Could not connect to newly created 'events' collection")
-		}
-		if err := Col.Index([]string{"domain", "owner", "repo", "branch", "commit"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"status"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"domain"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"owner"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"repo"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"branch"}); err != nil {
-			panic(err)
-		}
-		if err := Col.Index([]string{"commit"}); err != nil {
-			panic(err)
-		}
-	}
+	DB = sqlx.MustConnect("sqlite3", DBDir+"/deadci.db")
+	DB.MustExec("CREATE TABLE IF NOT EXISTS deadci " + tableDef)
+	DB.MustExec("CREATE INDEX IF NOT EXISTS status_index on deadci (status)")
+	DB.MustExec("CREATE INDEX IF NOT EXISTS domain_index on deadci (domain)")
+	DB.MustExec("CREATE INDEX IF NOT EXISTS owner_index on deadci (domain, owner)")
+	DB.MustExec("CREATE INDEX IF NOT EXISTS repo_index on deadci (domain, owner, repo)")
+	DB.MustExec("CREATE INDEX IF NOT EXISTS branch_index on deadci (domain, owner, repo, branch)")
+	DB.MustExec("CREATE UNIQUE INDEX IF NOT EXISTS combined_index on deadci (domain, owner, repo, branch, `commit`)")
 }
 
 // Get a pending event, mark it as running
 func PopEvent() (*Event, error) {
-	var query interface{}
-	json.Unmarshal([]byte(`[{"eq": "pending", "in": ["status"]}]`), &query)
-	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
-	if err := db.EvalQuery(query, Col, &queryResult); err != nil {
+	event := Event{}
+
+	err := DB.Get(&event, "SELECT * FROM deadci WHERE status = 'pending' ORDER BY id ASC LIMIT 1")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+	// Mark as running and return
+	event.Status = StatusRunning
+	if len(event.Log) != 0 {
+		event.Log = []byte("Retrying...\n")
+	}
+	e := &event
+	err = e.Update()
+	if err != nil {
 		return nil, err
 	}
-	// Query result are document IDs
-	for id := range queryResult {
-		readBack, err := Col.Read(id)
-		if err != nil {
-			return nil, err
-		}
-		e := &Event{
-			ID: id,
-			Event: hookserve.Event{
-				Owner:  readBack["owner"].(string),
-				Repo:   readBack["repo"].(string),
-				Branch: readBack["branch"].(string),
-				Commit: readBack["commit"].(string),
-			},
-			Domain: readBack["domain"].(string),
-			Status: StatusRunning,
-			Log:    []byte(readBack["log"].(string)),
-		}
 
-		// Save it back to the database marked as running
-		err = Col.Update(e.ID, e.DBItem())
-		if err != nil {
-			return nil, err
-		}
-
-		return e, nil
-	}
-
-	// Nothing in the queue
-	return nil, nil
+	return e, nil
 }
 
 func GetEvent(domain, owner, repo, branch, commit string) (*Event, error) {
-	var query interface{}
-	json.Unmarshal([]byte(`[{"eq": "`+domain+`", "in": ["domain"]}, {"eq": "`+owner+`", "in": ["owner"]}, {"eq": "`+repo+`", "in": ["repo"]}, {"eq": "`+branch+`", "in": ["branch"]}, {"eq": "`+commit+`", "in": ["commit"]}]`), &query)
-	queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
-	if err := db.EvalQuery(query, Col, &queryResult); err != nil {
-		return nil, err
-	}
-	// Query result are document IDs
-	for id := range queryResult {
-		readBack, err := Col.Read(id)
-		if err != nil {
+	event := Event{}
+
+	err := DB.Get(&event, "SELECT * FROM deadci WHERE domain = ? AND owner = ? AND repo = ? AND branch = ? AND `commit` = ?", domain, owner, repo, branch, commit)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
 			return nil, err
 		}
-		return &Event{
-			ID: id,
-			Event: hookserve.Event{
-				Owner:  readBack["owner"].(string),
-				Repo:   readBack["repo"].(string),
-				Branch: readBack["branch"].(string),
-				Commit: readBack["commit"].(string),
-			},
-			Domain: readBack["domain"].(string),
-			Status: EventStatus(readBack["status"].(string)),
-			Log:    []byte(readBack["log"].(string)),
-		}, nil
 	}
-
-	// No results
-	return nil, nil
-}
-
-func (e *Event) DBItem() map[string]interface{} {
-	return map[string]interface{}{
-		"domain": e.Domain,
-		"owner":  e.Owner,
-		"repo":   e.Repo,
-		"branch": e.Branch,
-		"commit": e.Commit,
-		"status": string(e.Status),
-		"log":    string(e.Log),
-	}
+	return &event, nil
 }
 
 func (e *Event) Insert() error {
-	id, err := Col.Insert(e.DBItem())
-	e.ID = id
-	return err
+	if e.ID != 0 {
+		return errors.New("Cannot Insert event with an ID. Use Update()")
+	}
+	res, err := DB.NamedExec("INSERT INTO deadci (time,status,domain,owner, repo, branch, `commit`, log) VALUES(:time, :status, :domain, :owner, :repo, :branch, :commit, :log)", e)
+	if err != nil {
+		return err
+	} else {
+		id, err := res.LastInsertId()
+		if err != nil {
+			return err
+		} else {
+			e.ID = int(id)
+			return nil
+		}
+	}
 }
 
 func (e *Event) Update() error {
-	// If we dont' know the ID, then get it from the DB
 	if e.ID == 0 {
-		var query interface{}
-		json.Unmarshal([]byte(`[{"eq": "`+e.Domain+`", "in": ["domain"]}, {"eq": "`+e.Owner+`", "in": ["owner"]}, {"eq": "`+e.Repo+`", "in": ["repo"]}, {"eq": "`+e.Branch+`", "in": ["branch"]}, {"eq": "`+e.Commit+`", "in": ["commit"]}]`), &query)
-		queryResult := make(map[int]struct{}) // query result (document IDs) goes into map keys
-		if err := db.EvalQuery(query, Col, &queryResult); err != nil {
-			return err
-		}
-		// Query result are document IDs
-		for id := range queryResult {
-			e.ID = id
-			break
-		}
+		return errors.New("Cannot update event with no ID. Use Insert()")
 	}
-
-	return Col.Update(e.ID, e.DBItem())
+	_, err := DB.NamedExec("UPDATE deadci SET time = :time , status = :status, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, log = :log WHERE id= :id", e)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
