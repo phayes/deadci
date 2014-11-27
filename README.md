@@ -1,3 +1,3 @@
-<div style="text-align:center"><img src="/media/deadci-logo.png" /></div>
+<center><img src="/media/deadci-logo.png" /></center>
 
 Dead Easy Continuous Integration and Testing
