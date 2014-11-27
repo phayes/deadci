@@ -5,8 +5,6 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	//"github.com/phayes/hookserve/hookserve"
-	"sync"
 )
 
 const tableDef = `(
@@ -22,14 +20,12 @@ const tableDef = `(
 )`
 
 var (
-	DBDir string = "/tmp/MyDatabase"
-	DB    *sqlx.DB
-	Mux   sync.Mutex
+	DB *sqlx.DB
 )
 
 // Bootstrap database
-func DBInit() {
-	DB = sqlx.MustConnect("sqlite3", DBDir+"/deadci.db")
+func InitDB() {
+	DB = sqlx.MustConnect("sqlite3", DataDir+"/deadci.sqlite")
 	DB.MustExec("CREATE TABLE IF NOT EXISTS deadci " + tableDef)
 	DB.MustExec("CREATE INDEX IF NOT EXISTS status_index on deadci (status)")
 	DB.MustExec("CREATE INDEX IF NOT EXISTS domain_index on deadci (domain)")

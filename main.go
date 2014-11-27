@@ -3,58 +3,85 @@ package main
 import (
 	"fmt"
 	"github.com/codegangsta/cli"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/phayes/hookserve/hookserve"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
-var OptCommand string = "ls -lah"
+var (
+	RunCommand cli.Args
+	DataDir    string
+)
 
 func main() {
 
-	spew.Config.DisableMethods = true
-
-	DBInit()
-
 	app := cli.NewApp()
-	app.Name = "lightci"
+	app.Name = "deadci"
 	app.Usage = "Dead easy CI server\n\n"
+	app.Usage += "EXAMPLES:\n"
+	app.Usage += "   # Process a .travis.yml file using the travis command line tool\n"
+	app.Usage += "   deadci --data-dir=/opt/deadci --port=8080 --secret=xyz travis run\n\n"
+	app.Usage += "   # Run on port 80 with no HMAC verification, run a file in the repo called `runtest`\n"
+	app.Usage += "   deadci --data-dir=/opt/deadci ./runtests"
 	app.Version = "1.0"
 	app.Author = "Patrick Hayes"
 	app.Email = "patrick.d.hayes@gmail.com"
 	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "data-dir",
+			Value: "",
+			Usage: "Data directory. Must be writable. ",
+		},
 		cli.IntFlag{
 			Name:  "port, p",
 			Value: 80,
-			Usage: "port on which to listen for github webhooks",
+			Usage: "Optional. Port on which to listen for github webhooks and serve reports, default to 80.",
 		},
 		cli.StringFlag{
 			Name:  "secret, s",
 			Value: "",
-			Usage: "Secret for HMAC verification. If not provided no HMAC verification will be done and all valid requests will be processed",
+			Usage: "Optional. Secret for HMAC verification. If not provided no HMAC verification will be done and all valid requests will be processed",
 		},
 	}
 
 	app.Action = func(c *cli.Context) {
+		if c.Args().First() == "" {
+			log.Fatal("Command argument required. Please run `deadci --help` for more information")
+		}
+		if c.String("data-dir") == "" {
+			log.Fatal("--data-dir flag required. Please run `deadci --help` for more information")
+		}
+
+		// Set the global RunCommand
+		RunCommand = c.Args()
+		DataDir = c.String("data-dir")
+
+		// Set up database and ansi2html script
+		InitDB()
+		InitANSI2HTML()
+
+		// Set up HTTP paths
 		githubreceive := hookserve.NewServer()
 		githubreceive.Secret = c.String("secret")
-
 		http.Handle("/postreceive", githubreceive)
 		http.HandleFunc("/rerun/", handleReRun)
 		http.HandleFunc("/", handleUI)
 
+		// Listen ans serve HTTP
 		go func() {
-			log.Println("Listening on port 12345")
-			err := http.ListenAndServe(":12345", nil)
+			log.Println("Listening on port " + strconv.Itoa(c.Int("port")))
+			err := http.ListenAndServe(":"+strconv.Itoa(c.Int("port")), nil)
 			if err != nil {
 				log.Fatal("ListenAndServe: ", err)
 			}
 		}()
 
+		// Receive events from github and process them
 		for {
 			select {
 			case commit := <-githubreceive.Events:
@@ -109,6 +136,19 @@ func main() {
 }
 
 func handleUI(w http.ResponseWriter, r *http.Request) {
+
+	// If it's a POST we re-run it
+	if r.Method == "POST" {
+		handleReRun(w, r)
+		return
+	}
+
+	// Check the method
+	if r.Method != "GET" {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	defer r.Body.Close()
 
 	parts := strings.Split(r.URL.Path, "/")
@@ -127,15 +167,22 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if event == nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	fmt.Fprintln(w, event.String())
+	ansi2html, err := ANSI2HTML(event.String())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	io.Copy(w, ansi2html)
+
 	if event.Status == StatusSuccess || event.Status == StatusFailed || event.Status == StatusFailedBoot {
-		fmt.Fprintln(w, "<a href='/rerun/"+event.Path()+"'>Rerun</a>")
+		fmt.Fprintln(w, "<a href='/rerun/"+event.Path()+"'>re-run</a>")
 	}
 }
 

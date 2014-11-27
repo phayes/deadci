@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -68,7 +67,7 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Check out correct commit
-	cmdCheckout := exec.Command("git", "checkout", e.Commit)
+	cmdCheckout := exec.Command("git", "checkout", "-q", e.Commit)
 	cmdCheckout.Dir = os.TempDir() + "deadci/" + e.Path() + "/" + e.Repo
 	cmdCheckoutOut, err := cmdCheckout.CombinedOutput()
 	e.Log = append(e.Log, cmdCheckoutOut...)
@@ -77,8 +76,7 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Run the main command to do the testing
-	cmdParts := strings.Split(OptCommand, " ")
-	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+	cmd := exec.Command(RunCommand.First(), RunCommand.Tail()...)
 	cmd.Dir = os.TempDir() + "deadci/" + e.Path() + "/" + e.Repo
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "DEADCI_DOMAIN="+e.Domain, "DEADCI_OWNER="+e.Owner, "DEADCI_REPO="+e.Repo, "DEADCI_BRANCH="+e.Branch, "DEADCI_COMMIT="+e.Commit)
@@ -141,7 +139,7 @@ func (e *Event) Run() (string, error) {
 
 func (e *Event) Report(status string, err error) error {
 	if err != nil {
-		e.Log = append(e.Log, []byte("\n"+status+":"+err.Error())...)
+		e.Log = append(e.Log, []byte("\n"+status+": "+err.Error())...)
 	} else {
 		e.Log = append(e.Log, []byte("\n"+status)...)
 	}
