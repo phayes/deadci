@@ -256,6 +256,19 @@ form {
   padding: 20px;
 }
 
+img.deadci-logo {
+  border:none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  -o-box-shadow: none;
+  -ms-box-shadow: none;
+  padding: 0px;
+  margin: 0px;
+  margin-top:-40px;
+  margin-bottom:-30px;
+}
+
 /*******************************************************************************
 Full-Width Styles
 *******************************************************************************/
