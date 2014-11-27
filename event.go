@@ -1,6 +1,8 @@
 package main
 
 import (
+	"code.google.com/p/goauth2/oauth"
+	"github.com/google/go-github/github"
 	"github.com/phayes/hookserve/hookserve"
 	"io"
 	"os"
@@ -137,7 +139,7 @@ func (e *Event) Run() (string, error) {
 	}
 }
 
-func (e *Event) Report(status string, err error) error {
+func (e *Event) Finalize(status string, err error) error {
 	if err != nil {
 		e.Log = append(e.Log, []byte("\n"+status+": "+err.Error())...)
 	} else {
@@ -147,5 +149,96 @@ func (e *Event) Report(status string, err error) error {
 	e.Status = status
 	return e.Update()
 
-	// @@TODO: Log back to github
+	// Send the report to the provider
+	err = e.Report()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *Event) FullURL() string {
+	return "http://" + Host + "/" + e.Path()
+}
+
+func (e *Event) Report() error {
+	if e.Domain == "github.com" {
+		err := e.ReportGitHub()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Event) ReportGitHub() error {
+	// If github-token is not set, skip posting results
+	if GithubToken == "" {
+		return nil
+	}
+
+	// Create the authorization transport
+	t := &oauth.Transport{
+		Token: &oauth.Token{AccessToken: GithubToken},
+	}
+
+	status := e.TranslateStatus()
+	desc := e.StatusDescription()
+	url := e.FullURL()
+	repoStatus := &github.RepoStatus{
+		State:       &status,
+		TargetURL:   &url,
+		Description: &desc,
+	}
+
+	client := github.NewClient(t.Client())
+	_, _, err := client.Repositories.CreateStatus(e.Owner, e.Repo, e.Commit, repoStatus)
+	if err != nil {
+		return err
+	}
+
+	// Leave a comment on the commit if it failed.  We don't leave a comment if there was an error or a pass.
+	if status == StatusFailed {
+		commentStr := "DeadCI - build " + e.Status + ": " + desc + "\n" + "For details please see: " + e.FullURL()
+		comment := &github.RepositoryComment{Body: &commentStr}
+		_, _, err := client.Repositories.CreateComment(e.Owner, e.Repo, e.Commit, comment)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Event) StatusDescription() string {
+	lookup := map[string]string{
+		StatusPending:    "Build queued - please wait",
+		StatusRunning:    "Build and tests running - please wait",
+		StatusSuccess:    "Build successful and tests passed",
+		StatusFailed:     "Build testing failed",
+		StatusFailedBoot: "Error bootstrapping build environment",
+	}
+	desc, ok := lookup[e.Status]
+	if !ok {
+		panic("Unknown status: " + e.Status)
+	}
+	return desc
+}
+
+func (e *Event) TranslateStatus() string {
+	lookup := map[string]map[string]string{
+		"github.com": map[string]string{
+			StatusPending:    "pending",
+			StatusRunning:    "pending",
+			StatusSuccess:    "success",
+			StatusFailed:     "failure",
+			StatusFailedBoot: "error",
+		},
+	}
+	translated, ok := lookup[e.Domain][e.Status]
+	if !ok {
+		panic("Unknown status: " + e.Domain + " " + e.Status)
+	}
+	return translated
 }

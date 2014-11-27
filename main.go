@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/phayes/hookserve/hookserve"
@@ -14,8 +15,11 @@ import (
 )
 
 var (
-	RunCommand cli.Args
-	DataDir    string
+	RunCommand   cli.Args
+	DataDir      string
+	GithubToken  string
+	GithubSecret string
+	Host         string
 )
 
 func main() {
@@ -45,7 +49,15 @@ func main() {
 		cli.StringFlag{
 			Name:  "secret, s",
 			Value: "",
-			Usage: "Optional. Secret for HMAC verification. If not provided no HMAC verification will be done and all valid requests will be processed",
+			Usage: "Optional. Secret for HMAC verification. If not provided no HMAC verification will be done. See https://developer.github.com/webhooks/securing",
+		},
+		cli.StringFlag{
+			Name:  "token",
+			Usage: "Optional. Access token for posting results back to github. If no token is supplied, then no reports will be posted. See https://help.github.com/articles/creating-an-access-token-for-command-line-use",
+		},
+		cli.StringFlag{
+			Name:  "host",
+			Usage: "Optional. Hostname of the server. By default the hostname will be automatically discovered.",
 		},
 	}
 
@@ -57,9 +69,20 @@ func main() {
 			log.Fatal("--data-dir flag required. Please run `deadci --help` for more information")
 		}
 
-		// Set the global RunCommand
+		// Set the global RunCommand, Data-directory and if we want to report back to github
 		RunCommand = c.Args()
 		DataDir = c.String("data-dir")
+		GithubToken = c.String("token")
+		GithubSecret = c.String("secret")
+		if c.String("host") != "" {
+			Host = c.String("host")
+		} else {
+			var err error
+			Host, err = os.Hostname()
+			if err != nil {
+				log.Fatal("Unable to determine hostname. Please specify a hostname.")
+			}
+		}
 
 		// Set up database and ansi2html script
 		InitDB()
@@ -67,14 +90,14 @@ func main() {
 
 		// Set up HTTP paths
 		githubreceive := hookserve.NewServer()
-		githubreceive.Secret = c.String("secret")
+		githubreceive.Secret = GithubSecret
 		http.Handle("/postreceive", githubreceive)
-		http.HandleFunc("/rerun/", handleReRun)
 		http.HandleFunc("/", handleUI)
 
-		// Listen ans serve HTTP
+		// Listen and serve HTTP
 		go func() {
-			log.Println("Listening on port " + strconv.Itoa(c.Int("port")))
+			fmt.Println("Listening on port " + strconv.Itoa(c.Int("port")))
+			fmt.Println("Github webhook URL: http://" + Host + ":" + strconv.Itoa(c.Int("port")) + "/postreceive")
 			err := http.ListenAndServe(":"+strconv.Itoa(c.Int("port")), nil)
 			if err != nil {
 				log.Fatal("ListenAndServe: ", err)
@@ -105,10 +128,18 @@ func main() {
 						if err != nil {
 							log.Println(err)
 						}
+						err = checkEvent.Report()
+						if err != nil {
+							log.Println(err)
+						}
 					}
 				} else {
 					// It's a new event, insert it anew
 					err = event.Insert()
+					if err != nil {
+						log.Println(err)
+					}
+					err = event.Report()
 					if err != nil {
 						log.Println(err)
 					}
@@ -118,9 +149,13 @@ func main() {
 				if err != nil {
 					log.Println(err)
 				} else if event != nil {
+					err = event.Report()
+					if err != nil {
+						log.Println(err)
+					}
 					go func() {
 						status, err := event.Run()
-						err = event.Report(status, err)
+						err = event.Finalize(status, err)
 						if err != nil {
 							log.Println(err)
 						}
@@ -135,6 +170,7 @@ func main() {
 	app.Run(os.Args)
 }
 
+// Handle regular UI requests
 func handleUI(w http.ResponseWriter, r *http.Request) {
 
 	// If it's a POST we re-run it
@@ -151,17 +187,10 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 6 {
+	parts, err := parsePath(r.URL.Path)
+	if err != nil {
 		http.NotFound(w, r)
 		return
-	}
-	// Filter illigal characters
-	for _, part := range parts {
-		if strings.ContainsAny(part, " \"\\\b\f\n\r\t\v") {
-			http.NotFound(w, r)
-			return
-		}
 	}
 
 	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
@@ -179,59 +208,99 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	// Print output
+	fmt.Fprintln(w, "<html><body class='f9 b9'>")
 	io.Copy(w, ansi2html)
-
 	if event.Status == StatusSuccess || event.Status == StatusFailed || event.Status == StatusFailedBoot {
-		fmt.Fprintln(w, "<a href='/rerun/"+event.Path()+"'>re-run</a>")
+		fmt.Fprintln(w, "<form method='POST'><input type='submit' value='re-run'></form>")
 	}
+	fmt.Fprintln(w, "</body></html>")
 }
 
 func handleReRun(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 7 {
+	parts, err := parsePath(r.URL.Path)
+	if err != nil {
 		http.NotFound(w, r)
 		return
+	}
+
+	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if event == nil {
+		// For now we only support github
+		if parts[1] != "github.com" {
+			http.Error(w, "Only github.com currently supported", http.StatusInternalServerError)
+		}
+
+		// Event doesn't exist, create it and mark pending to queue it
+		event := Event{
+			Event: hookserve.Event{
+				Owner:  parts[2],
+				Repo:   parts[3],
+				Branch: parts[4],
+				Commit: parts[5],
+			},
+			Domain: "github.com", // For now we only support github
+			Status: StatusPending,
+			Time:   time.Now(),
+		}
+		err := event.Insert()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = event.Report()
+		if err != nil {
+			log.Println(err)
+		}
+		http.Redirect(w, r, "/"+event.Path(), http.StatusSeeOther)
+	} else {
+		if event.Status == StatusRunning {
+			http.Error(w, "Unable to re-run already running item", http.StatusInternalServerError)
+			return
+		}
+
+		// We have the event, run it again
+		// Save it back to the database marked as running
+		event.Status = StatusRunning
+		event.Log = []byte("Retrying...\n")
+		err := event.Update()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = event.Report()
+		if err != nil {
+			log.Println(err)
+		}
+
+		go func() {
+			status, err := event.Run()
+			err = event.Finalize(status, err)
+			if err != nil {
+				log.Println(err)
+			}
+		}()
+
+		http.Redirect(w, r, "/"+event.Path(), 303)
+	}
+}
+
+func parsePath(path string) ([]string, error) {
+	parts := strings.Split(path, "/")
+	if len(parts) != 6 {
+		return nil, errors.New("Invalid Path")
 	}
 	// Filter illigal characters
 	for _, part := range parts {
 		if strings.ContainsAny(part, " \"\\\b\f\n\r\t\v") {
-			http.NotFound(w, r)
-			return
+			return nil, errors.New("Illigal character in path")
 		}
 	}
-	event, err := GetEvent(parts[2], parts[3], parts[4], parts[5], parts[6])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	if event == nil {
-		http.NotFound(w, r)
-		return
-	}
-	if event.Status == StatusRunning {
-		http.Error(w, "Unable to re-run already running item", http.StatusInternalServerError)
-		return
-	}
-
-	// We have the event, run it again
-
-	// Save it back to the database marked as running
-	event.Status = StatusRunning
-	event.Log = []byte("Retrying...\n")
-	event.Update()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	go func() {
-		status, err := event.Run()
-		err = event.Report(status, err)
-		if err != nil {
-			log.Println(err)
-		}
-	}()
-
-	http.Redirect(w, r, "/"+event.Path(), 303)
+	return parts, nil
 }

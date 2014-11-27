@@ -80,7 +80,7 @@ var ansi2htmlScript = `
 #                         Handle isolated <bold> attributes with css.
 #                         Strip more terminal control codes.
 #    V0.15, 16 Oct 2013
-#      http://github.com/pixelb/scripts/commits/master/scripts/ansi2html.sh
+#      http://github.com/pixelb/scripts/commits/master/scripts/ansi2<.sh
 
 if [ "$1" = "--version" ]; then
     printf '0.15\n' && exit
@@ -145,9 +145,7 @@ if ! sed --version >/dev/null 2>&1; then
   fi
 fi
 
-printf '%s' "<html>
-<head>
-<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>
+printf '%s' "
 <style type=\"text/css\">
 .ef0,.f0 { color: #$P0; } .eb0,.b0 { background-color: #$P0; }
 .ef1,.f1 { color: #$P1; } .eb1,.b1 { background-color: #$P1; }
@@ -214,9 +212,8 @@ printf '%s' '
 .blink { text-decoration: blink; }
 
 </style>
-</head>
 
-<body class="f9 b9">
+<div class="f9 b9">
 <pre>
 '
 
@@ -388,7 +385,6 @@ for c in unicode(sys.stdin.read(), encoding):
 sed 's/[¡µ]//g' # just strip aternative flag chars
 )
 
-printf '</pre>
-</body>
-</html>\n'
+printf '</pre></div>
+\n'
 `
