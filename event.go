@@ -78,7 +78,12 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Run the main command to do the testing
-	cmd := exec.Command(RunCommand.First(), RunCommand.Tail()...)
+	var cmd *exec.Cmd
+	if len(Config.Command) == 1 {
+		cmd = exec.Command(Config.Command[0])
+	} else {
+		cmd = exec.Command(Config.Command[0], Config.Command[1:]...)
+	}
 	cmd.Dir = os.TempDir() + "deadci/" + e.Path() + "/" + e.Repo
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "DEADCI_DOMAIN="+e.Domain, "DEADCI_OWNER="+e.Owner, "DEADCI_REPO="+e.Repo, "DEADCI_BRANCH="+e.Branch, "DEADCI_COMMIT="+e.Commit)
@@ -159,7 +164,7 @@ func (e *Event) Finalize(status string, err error) error {
 }
 
 func (e *Event) FullURL() string {
-	return "http://" + Host + "/" + e.Path()
+	return "http://" + Config.Host + "/" + e.Path()
 }
 
 func (e *Event) Report() error {
@@ -174,13 +179,13 @@ func (e *Event) Report() error {
 
 func (e *Event) ReportGitHub() error {
 	// If github-token is not set, skip posting results
-	if GithubToken == "" {
+	if Config.Github.Token == "" {
 		return nil
 	}
 
 	// Create the authorization transport
 	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: GithubToken},
+		Token: &oauth.Token{AccessToken: Config.Github.Token},
 	}
 
 	status := e.TranslateStatus()

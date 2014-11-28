@@ -25,7 +25,7 @@ var (
 
 // Bootstrap database
 func InitDB() {
-	DB = sqlx.MustConnect("sqlite3", DataDir+"/deadci.sqlite")
+	DB = sqlx.MustConnect("sqlite3", Config.DataDir+"/deadci.sqlite")
 	DB.MustExec("CREATE TABLE IF NOT EXISTS deadci " + tableDef)
 	DB.MustExec("CREATE INDEX IF NOT EXISTS status_index on deadci (status)")
 	DB.MustExec("CREATE INDEX IF NOT EXISTS domain_index on deadci (domain)")

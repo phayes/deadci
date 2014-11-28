@@ -9,7 +9,7 @@ import (
 
 func ANSI2HTML(ansi string) (io.ReadCloser, error) {
 	// Run the results through html2ansi script
-	html2ansi := exec.Command("sh", DataDir+"/ansi2html.sh", "--bg=dark")
+	html2ansi := exec.Command("sh", Config.DataDir+"/ansi2html.sh", "--bg=dark")
 	in, err := html2ansi.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func ANSI2HTML(ansi string) (io.ReadCloser, error) {
 // Write the ansi2html script out to a file so it can be used
 // @@TODO: We really ought to have an ansi2html golang library, but it doesn't exist yet
 func InitANSI2HTML() {
-	err := ioutil.WriteFile(DataDir+"/ansi2html.sh", []byte(ansi2htmlScript), 0700)
+	err := ioutil.WriteFile(Config.DataDir+"/ansi2html.sh", []byte(ansi2htmlScript), 0700)
 	if err != nil {
 		log.Fatal(err)
 	}
