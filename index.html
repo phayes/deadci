@@ -33,6 +33,21 @@
 
         <p>DeadCI is a lightweight continuous integration and testing server that integrates seamlessly with <a href="https://github.com">GitHub</a> (other platforms coming). As the name implies it is dead easy to use. DeadCI works by running a command of your choice at the root of the repository being built. It's easy to run <a href="https://https://travis-ci.org">TravisCI</a> jobs from a <code>.travis.yml</code> locally. It also integrates nicely with <a href="https://github.com/jolicode/JoliCi">JoliCI</a> to run yours tests inside a <a href="https://www.docker.com">Docker</a> container. </p>
 
+
+
+        <h3>travis-Local</h3>
+
+        <p>travis-local is a small bash script that lets you run a `.travis.yml` file locally. It only supports a subset of .travis.yml directives - specifically it will run the build lifecycle which includes before_install, install, before_script, script, after_success, after_failure, and after_script directives. It doesn't have support for any other directives, although pull-requests to add support for more directives are very welcome.</p>
+
+        <p>Running travis-local is easy.</p>
+
+        <pre>
+        $ travis-local /path/to/repository/to/test
+        $ travis-local # Run in the current directory
+        </pre>
+
+        <p>You may also be interested in [JoliCi](https://github.com/jolicode/JoliCi), which let's you run your travis builds locally inside of [Docker](https://www.docker.com).</p>
+
       </section>
     </div>
 
