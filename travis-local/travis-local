@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Move to the directory specified in the first argument
+if [ -n "$1" ]; then
+  cd $1
+fi
+
 # Export constant environment variables
 export CI=true
 export TRAVIS=true
