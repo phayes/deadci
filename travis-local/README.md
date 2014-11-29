@@ -14,12 +14,12 @@ You may also be interested in [JoliCi](https://github.com/jolicode/JoliCi), whic
 
 ###Installing
 ```bash
-$ # Install dependancies: travis and travis-build
-$ gem install travis #install travis
-$ git clone git@github.com:travis-ci/travis-build.git # Clone travis build
-$ ln -s travis-build ~/.travis/travis-build 
-$ 
-$ # Copy to bin path and chmod it
-$ sudo cp travis-local /usr/bin
-$ sudo chmod a+x /usr/bin/travis-local
+# Install dependancies: travis and travis-build
+gem install travis #install travis
+git clone git@github.com:travis-ci/travis-build.git # Clone travis build
+ln -s travis-build ~/.travis/travis-build
+
+# Copy to bin path and chmod it
+sudo cp travis-local /usr/bin
+sudo chmod a+x /usr/bin/travis-local
 ```
