@@ -11,3 +11,15 @@ $ travis-local # Run in the current directory
 ```
 
 You may also be interested in [JoliCi](https://github.com/jolicode/JoliCi), which let's you run your travis builds locally inside of [Docker](https://www.docker.com).
+
+###Installing
+```bash
+# Install dependancies: travis and travis-build
+gem install travis #install travis
+git clone git@github.com:travis-ci/travis-build.git # Clone travis build
+ln -s travis-build ~/.travis/travis-build
+
+# Copy to bin path and chmod it
+sudo cp travis-local /usr/bin
+sudo chmod a+x /usr/bin/travis-local
+```
