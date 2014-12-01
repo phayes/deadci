@@ -7,12 +7,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	InitConfig()
 	InitDB()
@@ -36,7 +38,34 @@ func main() {
 		}
 	}()
 
-	// Receive events from github and process them
+	// Launch workers for running jobs
+	// We have a number of workers equal to the number of cores
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		go func() {
+			for {
+				event, err := PopEvent()
+				if err != nil {
+					log.Println(err)
+				} else if event != nil {
+					err = event.Report()
+					if err != nil {
+						log.Println(err)
+					} else {
+						go func() {
+							status, err := event.Run()
+							err = event.Finalize(status, err)
+							if err != nil {
+								log.Println(err)
+							}
+						}()
+					}
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		}()
+	}
+
+	// Loop for adding new events to the queue
 	for {
 		select {
 		case commit := <-githubreceive.Events:
@@ -77,24 +106,7 @@ func main() {
 				}
 			}
 		default:
-			event, err := PopEvent()
-			if err != nil {
-				log.Println(err)
-			} else if event != nil {
-				err = event.Report()
-				if err != nil {
-					log.Println(err)
-				}
-				go func() {
-					status, err := event.Run()
-					err = event.Finalize(status, err)
-					if err != nil {
-						log.Println(err)
-					}
-				}()
-			} else {
-				time.Sleep(50 * time.Millisecond)
-			}
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 }
