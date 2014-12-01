@@ -8,6 +8,10 @@
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/railscasts.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
     <title>DeadCI</title>
   </head>
 
@@ -31,9 +35,21 @@
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
 
-        <p>DeadCI is a lightweight continuous integration and testing server that integrates seamlessly with <a href="https://github.com">GitHub</a> (other platforms coming). As the name implies it is dead easy to use. DeadCI works by running a command of your choice at the root of the repository being built. It's easy to run <a href="https://https://travis-ci.org">TravisCI</a> jobs from a <code>.travis.yml</code> locally. It also integrates nicely with <a href="https://github.com/jolicode/JoliCi">JoliCI</a> to run yours tests inside a <a href="https://www.docker.com">Docker</a> container. </p>
+        <p>DeadCI is a lightweight continuous integration and testing web server that integrates seamlessly with <a href="https://github.com">GitHub</a> (other platforms coming). As the name implies it is dead easy to use. DeadCI works by running a command of your choice at the root of the repository being built. It's easy to run <a href="https://https://travis-ci.org">TravisCI</a> jobs from a <code>.travis.yml</code> locally. It also integrates nicely with <a href="https://github.com/jolicode/JoliCi">JoliCI</a> to run yours tests inside a <a href="https://www.docker.com">Docker</a> container. </p>
 
+        <h3>Installation</h3>
 
+        Installation is very straight forward.
+
+        <pre><code style='bash'>
+          wget https://phayes.github.io/bin/current/deadci/linux/deadci.tar.gz # Replace `linux` with `mac` for MacOSX.
+          tar -xf deadci.tar.gz           # Extract DeadCI from tarball
+          sudo cp deadci /usr/bin         # Copy the DeadCI executable to somewhere in your $PATH
+          sudo mkdir /etc/deadci          # Create a data-directory for DeadCI
+          cp deadci.ini /etc/deadci       # Copy default settings over to data directory
+          vim /etc/deadci/deadci.ini      # Edit .ini settings as needed
+          deadci --data-dir=/etc/deadci   # Start the DeadCI webserver
+        </code></pre>
 
         <h3>travis-local</h3>
 
