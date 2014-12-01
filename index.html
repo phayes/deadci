@@ -41,12 +41,18 @@
 
         Installation is very straight forward.
 
-        <pre><code>tar -xf deadci.tar.gz           # Extract DeadCI from tarball
+        <pre><code class='bash'>tar -xf deadci.tar.gz           # Extract DeadCI from tarball
 sudo cp deadci /usr/bin         # Copy the DeadCI executable to somewhere in your $PATH
 sudo mkdir /etc/deadci          # Create a data-directory for DeadCI
 cp deadci.ini /etc/deadci       # Copy default settings over to data directory
 vim /etc/deadci/deadci.ini      # Edit .ini settings as needed
 deadci --data-dir=/etc/deadci   # Start the DeadCI webserver</code></pre>
+
+        <h4>Building from source</h4>
+<pre><code class='bash'>sudo apt-get install golang                    # Download go. Alternativly build from source: https://golang.org/doc/install/source
+mkdir ~/.gopath && export GOPATH=~/.gopath     # Replace with desired GOPATH
+export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin dir to your PATH
+go get github.com/phayes/deadci                # Download source and compile</code></pre>
 
         <h3>travis-local</h3>
 
