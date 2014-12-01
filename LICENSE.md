@@ -1,3 +1,6 @@
+Open Source License (BSD 3-Clause)
+----------------------------------
+
 Copyright (c) 2014, Patrick Hayes / HighWire Press
 All rights reserved.
 
