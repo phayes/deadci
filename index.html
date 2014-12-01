@@ -49,7 +49,7 @@ cp deadci.ini /etc/deadci       # Copy default settings over to data directory
 vim /etc/deadci/deadci.ini      # Edit .ini settings as needed
 deadci --data-dir=/etc/deadci   # Start the DeadCI webserver</code></pre>
 
-        <h4>Building from source</h4>
+        <h5>Building from source</h5>
 <pre><code class='bash'>sudo apt-get install golang                    # Download go. Alternativly build from source: https://golang.org/doc/install/source
 mkdir ~/.gopath && export GOPATH=~/.gopath     # Replace with desired GOPATH
 export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin dir to your PATH
