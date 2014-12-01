@@ -104,7 +104,7 @@ func GetEvents(args ...string) ([]Event, error) {
 			}
 		}
 	}
-	query += " ORDER BY id DESC"
+	query += " ORDER BY id DESC LIMIT 500"
 	err := DB.Select(&events, query, dbargs...)
 	if err != nil {
 		return nil, err

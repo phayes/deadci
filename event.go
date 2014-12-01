@@ -251,7 +251,7 @@ func (e *Event) TranslateStatus() string {
 }
 
 func (e *Event) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]string{
+	jmap := map[string]string{
 		"time":   e.Time.String(),
 		"domain": e.Domain,
 		"owner":  e.Owner,
@@ -259,6 +259,9 @@ func (e *Event) MarshalJSON() ([]byte, error) {
 		"branch": e.Branch,
 		"commit": e.Commit,
 		"status": e.Status,
-		"log":    string(e.Log),
-	})
+	}
+	if len(e.Log) != 0 {
+		jmap["log"] = string(e.Log)
+	}
+	return json.Marshal(jmap)
 }
