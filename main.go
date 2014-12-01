@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/phayes/hookserve/hookserve"
@@ -113,10 +114,17 @@ func main() {
 
 // Handle regular UI requests
 func handleUI(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	path, err := parsePath(r.URL.Path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
 
 	// If it's a POST we re-run it
 	if r.Method == "POST" {
-		handleReRun(w, r)
+		handleReRun(path, w, r)
 		return
 	}
 
@@ -126,65 +134,37 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer r.Body.Close()
-
-	parts, err := parsePath(r.URL.Path)
-	if err != nil {
-		http.NotFound(w, r)
-		return
+	if len(path) == 5 { // It's a single item
+		handleView(path, w, r)
+	} else { // It's an index request
+		handleIndex(path, w, r)
 	}
-
-	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if event == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	ansi2html, err := ANSI2HTML(event.String())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	// Print output
-	fmt.Fprintln(w, "<html><body class='f9 b9'>")
-	io.Copy(w, ansi2html)
-	if event.Status == StatusSuccess || event.Status == StatusFailed || event.Status == StatusFailedBoot {
-		fmt.Fprintln(w, "<form method='POST'><input type='submit' value='re-run'></form>")
-	}
-	fmt.Fprintln(w, "</body></html>")
 }
 
-func handleReRun(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	parts, err := parsePath(r.URL.Path)
-	if err != nil {
+func handleReRun(path []string, w http.ResponseWriter, r *http.Request) {
+	if len(path) != 5 {
 		http.NotFound(w, r)
 		return
 	}
 
-	event, err := GetEvent(parts[1], parts[2], parts[3], parts[4], parts[5])
+	event, err := GetEvent(path[0], path[1], path[2], path[3], path[4])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if event == nil {
 		// For now we only support github
-		if parts[1] != "github.com" {
+		if path[0] != "github.com" {
 			http.Error(w, "Only github.com currently supported", http.StatusInternalServerError)
 		}
 
 		// Event doesn't exist, create it and mark pending to queue it
 		event := Event{
 			Event: hookserve.Event{
-				Owner:  parts[2],
-				Repo:   parts[3],
-				Branch: parts[4],
-				Commit: parts[5],
+				Owner:  path[1],
+				Repo:   path[2],
+				Branch: path[3],
+				Commit: path[4],
 			},
 			Domain: "github.com", // For now we only support github
 			Status: StatusPending,
@@ -232,9 +212,70 @@ func handleReRun(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleView(path []string, w http.ResponseWriter, r *http.Request) {
+	event, err := GetEvent(path[0], path[1], path[2], path[3], path[4])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if event == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if r.Header.Get("Accept") == "application/json" {
+		jbytes, err := json.MarshalIndent(event, " ", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(jbytes)
+	} else { // Serve HTML
+		ansi2html, err := ANSI2HTML(event.String())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Print output
+		fmt.Fprintln(w, "<html><body class='f9 b9'>")
+		io.Copy(w, ansi2html)
+		if event.Status == StatusSuccess || event.Status == StatusFailed || event.Status == StatusFailedBoot {
+			fmt.Fprintln(w, "<form method='POST'><input type='submit' value='re-run'></form>")
+		}
+		fmt.Fprintln(w, "</body></html>")
+	}
+}
+
+func handleIndex(path []string, w http.ResponseWriter, r *http.Request) {
+	// Handle main index -- list all events
+	events, err := GetEvents(path...)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if r.Header.Get("Accept") == "application/json" {
+		jbytes, err := json.MarshalIndent(events, " ", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(jbytes)
+	} else {
+		fmt.Fprintln(w, "<html><body style='background-color:black; color:white'><table style='width:100%'>")
+		for _, event := range events {
+			fmt.Fprintln(w, "<tr>")
+			fmt.Fprintln(w, "<td>"+event.Time.String()+"</td><td>"+event.Status+"</td><td><a href='"+event.FullURL()+"'>"+event.Path()+"<a/></td>")
+			fmt.Fprintln(w, "</tr>")
+		}
+		fmt.Fprintln(w, "</table></body></html>")
+	}
+}
+
 func parsePath(path string) ([]string, error) {
 	parts := strings.Split(path, "/")
-	if len(parts) != 6 {
+	if len(parts) > 6 {
 		return nil, errors.New("Invalid Path")
 	}
 	// Filter illigal characters
@@ -243,5 +284,9 @@ func parsePath(path string) ([]string, error) {
 			return nil, errors.New("Illigal character in path")
 		}
 	}
-	return parts, nil
+	if len(parts) == 2 && parts[1] == "" {
+		return make([]string, 0), nil
+	} else {
+		return parts[1:], nil
+	}
 }

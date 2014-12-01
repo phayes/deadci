@@ -2,11 +2,13 @@ package main
 
 import (
 	"code.google.com/p/goauth2/oauth"
+	"encoding/json"
 	"github.com/google/go-github/github"
 	"github.com/phayes/hookserve/hookserve"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -164,7 +166,7 @@ func (e *Event) Finalize(status string, err error) error {
 }
 
 func (e *Event) FullURL() string {
-	return "http://" + Config.Host + "/" + e.Path()
+	return "http://" + Config.Host + ":" + strconv.Itoa(Config.Port) + "/" + e.Path()
 }
 
 func (e *Event) Report() error {
@@ -246,4 +248,17 @@ func (e *Event) TranslateStatus() string {
 		panic("Unknown status: " + e.Domain + " " + e.Status)
 	}
 	return translated
+}
+
+func (e *Event) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]string{
+		"time":   e.Time.String(),
+		"domain": e.Domain,
+		"owner":  e.Owner,
+		"repo":   e.Repo,
+		"branch": e.Branch,
+		"commit": e.Commit,
+		"status": e.Status,
+		"log":    string(e.Log),
+	})
 }

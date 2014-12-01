@@ -75,6 +75,43 @@ func GetEvent(domain, owner, repo, branch, commit string) (*Event, error) {
 	return &event, nil
 }
 
+func GetEvents(args ...string) ([]Event, error) {
+	events := []Event{}
+
+	if len(args) > 5 {
+		panic("too many arguments to GetEvents()")
+	}
+
+	query := "SELECT time,status,domain,owner, repo, branch, `commit` FROM deadci"
+	dbargs := make([]interface{}, 0)
+	if len(args) >= 1 {
+		query += " WHERE domain = ?"
+		dbargs = append(dbargs, args[0])
+		if len(args) >= 2 {
+			query += " AND owner = ?"
+			dbargs = append(dbargs, args[1])
+			if len(args) >= 3 {
+				query += " AND repo = ?"
+				dbargs = append(dbargs, args[2])
+				if len(args) >= 4 {
+					query += " AND branch = ?"
+					dbargs = append(dbargs, args[3])
+					if len(args) == 5 {
+						query += " AND `commit` = ?"
+						dbargs = append(dbargs, args[4])
+					}
+				}
+			}
+		}
+	}
+	query += " ORDER BY id DESC"
+	err := DB.Select(&events, query, dbargs...)
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
 func (e *Event) Insert() error {
 	if e.ID != 0 {
 		return errors.New("Cannot Insert event with an ID. Use Update()")
