@@ -27,7 +27,7 @@ $ go get github.com/phayes/deadci                # Download source and compile
 
 Setting github to work with DeadCI is easy. 
 
-#### Step 1
+##### Step 1
 
 Step 1 is to set-up your github webhook. Navigate to `github.com/<name>/<repo>/settings/hooks` and create a new webhook. Setting up your webhook should look something like this:
 
@@ -35,6 +35,6 @@ Step 1 is to set-up your github webhook. Navigate to `github.com/<name>/<repo>/s
 
 Simply fill in the URL that DeadCI gives you when it boots, optionally setting your secret for HMAC verification.
 
-#### Step 2
+##### Step 2
 
 Step 2 is to set-up your github access token so DeadCI can post it's results back to github. This step is optional if you don't want to show status reports on Pull Requests and commits in github. 
