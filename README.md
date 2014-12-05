@@ -38,3 +38,9 @@ Simply fill in the URL that DeadCI gives you when it boots, optionally setting y
 ##### Step 2
 
 Step 2 is to set-up your github access token so DeadCI can post it's results back to github. This step is optional if you don't want to show status reports on Pull Requests and commits in github. 
+
+Follow the instruction here: https://help.github.com/articles/creating-an-access-token-for-command-line-use. You should select `repo` and `public_repo` scopes. 
+
+##### Step 3
+
+Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to `POST` to your DeadCI instance from the IP block range of `192.30.252.0/22` on the port you configured DeadCI to listen on. 
