@@ -43,4 +43,4 @@ Follow the instruction here: https://help.github.com/articles/creating-an-access
 
 ##### Step 3
 
-Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to `POST` to your DeadCI instance from the IP block range of `192.30.252.0/22` on the port you configured DeadCI to listen on. 
+Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to `POST` to your DeadCI instance from the IP block range of `192.30.252.0/22` on the port you configured DeadCI to listen on (default is port `80`). 
