@@ -12,7 +12,7 @@ $ cp deadci.ini /etc/deadci       # Copy default settings over to data directory
 $ vim /etc/deadci/deadci.ini      # Edit .ini settings as needed
 $ deadci --data-dir=/etc/deadci   # Start the DeadCI webserver
 Webserver started at http://example.com
-Github webhook URL: http://example.com/postreceive
+Github payload URL: http://example.com/postreceive
 ```
 
 Building from source
