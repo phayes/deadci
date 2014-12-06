@@ -37,7 +37,7 @@
 
         <p>DeadCI is a lightweight continuous integration and testing web server that integrates seamlessly with <a href="https://github.com">GitHub</a> (other platforms coming). As the name implies it is dead easy to use. DeadCI works by running a command of your choice at the root of the repository being built. It's easy to run <a href="https://https://travis-ci.org">TravisCI</a> jobs from a <code>.travis.yml</code> locally. It also integrates nicely with <a href="https://github.com/jolicode/JoliCi">JoliCI</a> to run yours tests inside a <a href="https://www.docker.com">Docker</a> container. </p>
 
-        <h3>Installation</h3>
+        <h2>Installation</h2>
 
         Installation is very straight forward.
 
@@ -57,7 +57,7 @@ $ mkdir ~/.gopath && export GOPATH=~/.gopath     # Replace with desired GOPATH
 $ export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin dir to your PATH
 $ go get github.com/phayes/deadci                # Download source and compile</code></pre>
 
-        <h3>Settings up GitHub</h3>
+        <h4>Settings up GitHub</h4>
 
         <p>Setting github to work with DeadCI is easy.</p>
 
@@ -80,7 +80,7 @@ $ go get github.com/phayes/deadci                # Download source and compile</
         <p>Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to POST to your DeadCI instance from the IP block range of <code>192.30.252.0/22</code> on the port you configured DeadCI to listen on (default is port <code>80</code>).</p>
 
         
-        <h3>RESTful API</h3>
+        <h2>RESTful API</h2>
 
         <p>DeadCI's RESTful API is dead easy to use.</p>
 
