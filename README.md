@@ -59,7 +59,7 @@ GET / HTTP/1.1
 Accept: application/json
 ```
 
-```http
+```json
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 Content-Length: 269
@@ -75,7 +75,7 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
      "repo": "drupal-highwire",
      "status": "failed",
      "time": "2014-11-26 16:43:42.506212827 -0800 PST"
-   }
+   }, 
    {
      "branch": "master",
      "commit": "50184f10163990515a3e7270cdefb9dd3725eab9",
@@ -99,7 +99,7 @@ GET /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdef
 Accept: application/json
 ```
 
-```http
+```json
 HTTP/1.1 200 OK
 Content-Type: text/plain; charset=utf-8
 Content-Length: 352
