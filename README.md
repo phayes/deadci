@@ -55,7 +55,7 @@ DeadCI's RESTful API is dead-easy to use.
 
 Example:
 ```http
-POST / HTTP/1.1
+GET / HTTP/1.1
 Accept: application/json
 ```
 
@@ -74,6 +74,15 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
      "owner": "highwire",
      "repo": "drupal-highwire",
      "status": "failed",
+     "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+   }
+   {
+     "branch": "master",
+     "commit": "50184f10163990515a3e7270cdefb9dd3725eab9",
+     "domain": "github.com",
+     "owner": "highwire",
+     "repo": "drupal-highwire",
+     "status": "success",
      "time": "2014-11-26 16:43:42.506212827 -0800 PST"
    }
  ]
