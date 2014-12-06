@@ -113,7 +113,7 @@ Date: Sat, 06 Dec 2014 00:48:55 GMT
 
 `POST /<domain>/<owner>/<repo>/<branch>/<commit>`
 
-To create a new build simply `POST` using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action.
+To create a new build simply `POST` using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action. Note that if you have GitHub configured to use DeadCI then this will happen automatically when new commits are pushed to the repository. However, you can still trigger a build manually using this API. 
 
 Example:
 ```http
