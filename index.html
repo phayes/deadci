@@ -124,7 +124,7 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
 
         <h5>Get build details</h5>
 
-        <code>GET /<domain>/<owner>/<repo>/<branch>/<commit></code>
+        <code>GET /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code>
 
         Example:
 
@@ -154,7 +154,7 @@ Date: Sat, 06 Dec 2014 00:48:55 GMT
 
         <h5>Triggering a build</h5>
 
-        <code>POST /<domain>/<owner>/<repo>/<branch>/<commit></code>
+        <code>POST /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code>
 
         <p>To create a new build simply <code>POST</code> using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action. Note that if you have GitHub configured to use DeadCI then this will happen automatically when new commits are pushed to the repository.</p>
 
