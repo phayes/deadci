@@ -49,7 +49,7 @@ Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. G
 
 DeadCI's RESTful API is dead-easy to use. 
 
-#### Listing builds 
+#### Get a list of all builds
 
 `GET /`
 
@@ -79,7 +79,7 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
  ]
 ```
 
-#### Build details
+#### Get build details
 
 `GET /<domain>/<owner>/<repo>/<branch>/<commit>`
 
