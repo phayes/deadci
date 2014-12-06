@@ -57,6 +57,119 @@ $ mkdir ~/.gopath && export GOPATH=~/.gopath     # Replace with desired GOPATH
 $ export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin dir to your PATH
 $ go get github.com/phayes/deadci                # Download source and compile</code></pre>
 
+        <h3>Settings up GitHub</h3>
+
+        <p>Setting github to work with DeadCI is easy.</p>
+
+        <h5>Step 1</h5>
+
+        <p>Step 1 is to set-up your github webhook. Navigate to github.com/<name>/<repo>/settings/hooks and create a new webhook. Setting up your webhook should look something like this:</p>
+
+        <img alt="GitHub Setup" src="https://camo.githubusercontent.com/61d68fa0e16103344b203e8b6afaf1ffb18bd22b/68747470733a2f2f692e696d6775722e636f6d2f753363695544372e706e67"/>
+
+        <p>Simply fill in the URL that DeadCI gives you when it boots, optionally setting your secret for HMAC verification.</p>
+
+        <h5>Step 2</h5>
+
+        <p>Step 2 is to set-up your github access token so DeadCI can post it's results back to github. This step is optional if you don't want to show status reports on Pull Requests and commits in github.</p>
+
+        <p>Follow the instruction here: <a href="https://help.github.com/articles/creating-an-access-token-for-command-line-use">https://help.github.com/articles/creating-an-access-token-for-command-line-use</a>. You should select repo and public_repo scopes.</p>
+
+        <h5>Step 3</h5>
+
+        <p>Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to POST to your DeadCI instance from the IP block range of <code>192.30.252.0/22</code> on the port you configured DeadCI to listen on (default is port <code>80</code>).</p>
+
+        
+        <h3>RESTful API</h3>
+
+        <p>DeadCI's RESTful API is dead easy to use.</p>
+
+        <h5>Get a list of all builds</h5>
+
+        <code>`GET /`</code>
+
+<pre><code class='http'>
+GET / HTTP/1.1
+Accept: application/json
+</code></pre>
+
+<pre><code class='http'>
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 269
+Connection: close
+Date: Sat, 06 Dec 2014 00:39:46 GMT
+
+[
+   {
+     "branch": "JCORE-1716",
+     "commit": "50184f10163990515a3e7370cdefb9dd3725eeb9",
+     "domain": "github.com",
+     "owner": "highwire",
+     "repo": "drupal-highwire",
+     "status": "failed",
+     "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+   }, 
+   {
+     "branch": "master",
+     "commit": "50184f10163990515a3e7270cdefb9dd3725eab9",
+     "domain": "github.com",
+     "owner": "highwire",
+     "repo": "drupal-highwire",
+     "status": "success",
+     "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+   }
+ ]
+</code></pre>
+
+        <h5>Get build details</h5>
+
+        <code>GET /<domain>/<owner>/<repo>/<branch>/<commit></code>
+
+        Example:
+
+<pre><code class='http'>
+GET /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
+Accept: application/json
+</code></pre>
+
+<pre><code class='http'>
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 352
+Connection: close
+Date: Sat, 06 Dec 2014 00:48:55 GMT
+
+{
+   "branch": "JCORE-1716",
+   "commit": "50184f10163990515a3e7370cdefb9dd3725eeb9",
+   "domain": "github.com",
+   "log": "Retrying...\nCloning into 'drupal-highwire'...\nno .travis.yml found\n\nfailed: exit status 1",
+   "owner": "highwire",
+   "repo": "drupal-highwire",
+   "status": "failed",
+   "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+ }
+</code></pre>
+
+        <h5>Triggering a build</h5>
+
+        <code>POST /<domain>/<owner>/<repo>/<branch>/<commit></code>
+
+        <p>To create a new build simply <code>POST</code> using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action. Note that if you have GitHub configured to use DeadCI then this will happen automatically when new commits are pushed to the repository.</p>
+
+<pre><code class='http'>
+POST /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
+</code></pre>
+
+<pre><code class='http'>
+HTTP/1.1 303 See Other
+Connection: close
+Location: /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9
+Date: Sat, 06 Dec 2014 00:52:40 GMT
+</code></pre>
+
+
         <h3>travis-local</h3>
 
         <p>travis-local is a small bash script that lets you run a <code>.travis.yml</code> file locally. It only supports a subset of .travis.yml directives - specifically it will run the build lifecycle which includes before_install, install, before_script, script, after_success, after_failure, and after_script directives. It doesn't have support for any other directives, although pull-requests to add support for more directives are very welcome.</p>
