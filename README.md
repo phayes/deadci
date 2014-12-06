@@ -79,7 +79,7 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
  ]
 ```
 
-#### Build Details
+#### Build details
 
 `GET /<domain>/<owner>/<repo>/<branch>/<commit>`
 
@@ -107,4 +107,25 @@ Date: Sat, 06 Dec 2014 00:48:55 GMT
    "status": "failed",
    "time": "2014-11-26 16:43:42.506212827 -0800 PST"
  }
+```
+
+#### Create new build
+
+`POST /<domain>/<owner>/<repo>/<branch>/<commit>`
+
+To create a new build simply `POST` using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action.
+
+Example:
+```http
+POST /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
+Accept: application/json
+```
+
+```http
+HTTP/1.1 303 See Other
+Connection: close
+Content-Length: 0
+Content-Type: text/plain; charset=utf-8
+Location: /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9
+Date: Sat, 06 Dec 2014 00:52:40 GMT
 ```
