@@ -86,15 +86,13 @@ $ go get github.com/phayes/deadci                # Download source and compile</
 
         <h5>Get a list of all builds</h5>
 
-        <code>`GET /`</code>
+        <p><code>`GET /`</code></p>
 
-<pre><code class='http'>
-GET / HTTP/1.1
+<pre><code class='http'>GET / HTTP/1.1
 Accept: application/json
 </code></pre>
 
-<pre><code class='http'>
-HTTP/1.1 200 OK
+<pre><code class='http'>HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 Content-Length: 269
 Connection: close
@@ -124,17 +122,13 @@ Date: Sat, 06 Dec 2014 00:39:46 GMT
 
         <h5>Get build details</h5>
 
-        <code>GET /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code>
+        <p><code>GET /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code></p>
 
-        Example:
-
-<pre><code class='http'>
-GET /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
+<pre><code class='http'>GET /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
 Accept: application/json
 </code></pre>
 
-<pre><code class='http'>
-HTTP/1.1 200 OK
+<pre><code class='http'>HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 Content-Length: 352
 Connection: close
@@ -154,16 +148,13 @@ Date: Sat, 06 Dec 2014 00:48:55 GMT
 
         <h5>Triggering a build</h5>
 
-        <code>POST /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code>
+        <p><code>POST /&lt;domain&gt;/&lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;commit&gt;</code></p>
 
         <p>To create a new build simply <code>POST</code> using the above pattern and DeadCI will queue the build for you. If the build already exists it will skip the queue and build it immidiately. DeadCI will then direct you to where you can see the build in action. Note that if you have GitHub configured to use DeadCI then this will happen automatically when new commits are pushed to the repository.</p>
 
-<pre><code class='http'>
-POST /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
-</code></pre>
+<pre><code class='http'>POST /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1</code></pre>
 
-<pre><code class='http'>
-HTTP/1.1 303 See Other
+<pre><code class='http'>HTTP/1.1 303 See Other
 Connection: close
 Location: /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9
 Date: Sat, 06 Dec 2014 00:52:40 GMT
