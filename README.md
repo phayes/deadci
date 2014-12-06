@@ -109,7 +109,7 @@ Date: Sat, 06 Dec 2014 00:48:55 GMT
  }
 ```
 
-#### Create new build
+#### Triggering a build
 
 `POST /<domain>/<owner>/<repo>/<branch>/<commit>`
 
@@ -118,7 +118,6 @@ To create a new build simply `POST` using the above pattern and DeadCI will queu
 Example:
 ```http
 POST /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
-Accept: application/json
 ```
 
 ```http
