@@ -23,7 +23,7 @@ $ export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin
 $ go get github.com/phayes/deadci                # Download source and compile
 ```
 
-### Settings up GitHub
+## Settings up GitHub
 
 Setting github to work with DeadCI is easy. 
 
@@ -44,3 +44,67 @@ Follow the instruction here: https://help.github.com/articles/creating-an-access
 ##### Step 3
 
 Step 3 is to verify your firewall setting to ensure GitHub can talk to DeadCI. GitHub will need to `POST` to your DeadCI instance from the IP block range of `192.30.252.0/22` on the port you configured DeadCI to listen on (default is port `80`). 
+
+## RESTful API
+
+DeadCI's RESTful API is dead-easy to use. 
+
+#### Listing builds 
+
+`GET /`
+
+Example:
+```http
+POST / HTTP/1.1
+Accept: application/json
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 269
+Connection: close
+Date: Sat, 06 Dec 2014 00:39:46 GMT
+
+[
+   {
+     "branch": "JCORE-1716",
+     "commit": "50184f10163990515a3e7370cdefb9dd3725eeb9",
+     "domain": "github.com",
+     "owner": "highwire",
+     "repo": "drupal-highwire",
+     "status": "failed",
+     "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+   }
+ ]
+```
+
+#### Build Details
+
+`GET /<domain>/<owner>/<repo>/<branch>/<commit>`
+
+Example:
+
+```http
+GET /github.com/highwire/drupal-highwire/JCORE-1716/50184f10163990515a3e7370cdefb9dd3725eeb9 HTTP/1.1
+Accept: application/json
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Content-Length: 352
+Connection: close
+Date: Sat, 06 Dec 2014 00:48:55 GMT
+
+{
+   "branch": "JCORE-1716",
+   "commit": "50184f10163990515a3e7370cdefb9dd3725eeb9",
+   "domain": "github.com",
+   "log": "Retrying...\nCloning into 'drupal-highwire'...\nno .travis.yml found\n\nfailed: exit status 1",
+   "owner": "highwire",
+   "repo": "drupal-highwire",
+   "status": "failed",
+   "time": "2014-11-26 16:43:42.506212827 -0800 PST"
+ }
+```
