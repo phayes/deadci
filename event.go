@@ -50,20 +50,20 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Clean the scratch space
-	err := os.RemoveAll(os.TempDir() + "deadci/" + e.Path())
+	err := os.RemoveAll(Config.TempDir + "/deadci/" + e.Path())
 	if err != nil {
 		return StatusFailedBoot, err
 	}
 
 	// Create scratch space
-	err = os.MkdirAll(os.TempDir()+"deadci/"+e.Path(), 0777)
+	err = os.MkdirAll(Config.TempDir+"/deadci/"+e.Path(), 0777)
 	if err != nil {
 		return StatusFailedBoot, err
 	}
 
 	// Clone repo
 	cmdClone := exec.Command("git", "clone", "git@"+e.Domain+":"+e.Owner+"/"+e.Repo+".git")
-	cmdClone.Dir = os.TempDir() + "deadci/" + e.Path()
+	cmdClone.Dir = Config.TempDir + "/deadci/" + e.Path()
 	cmdCloneOut, err := cmdClone.CombinedOutput()
 	e.Log = append(e.Log, cmdCloneOut...)
 	if err != nil {
@@ -72,7 +72,7 @@ func (e *Event) Run() (string, error) {
 
 	// Check out correct commit
 	cmdCheckout := exec.Command("git", "checkout", "-q", e.Commit)
-	cmdCheckout.Dir = os.TempDir() + "deadci/" + e.Path() + "/" + e.Repo
+	cmdCheckout.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmdCheckoutOut, err := cmdCheckout.CombinedOutput()
 	e.Log = append(e.Log, cmdCheckoutOut...)
 	if err != nil {
@@ -86,7 +86,7 @@ func (e *Event) Run() (string, error) {
 	} else {
 		cmd = exec.Command(Config.Command[0], Config.Command[1:]...)
 	}
-	cmd.Dir = os.TempDir() + "deadci/" + e.Path() + "/" + e.Repo
+	cmd.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "DEADCI_DOMAIN="+e.Domain, "DEADCI_OWNER="+e.Owner, "DEADCI_REPO="+e.Repo, "DEADCI_BRANCH="+e.Branch, "DEADCI_COMMIT="+e.Commit)
 	stderrPipe, err := cmd.StderrPipe()

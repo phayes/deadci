@@ -11,6 +11,7 @@ import (
 
 var Config struct {
 	DataDir string
+	TempDir string
 	Command []string
 	Port    int
 	Host    string
@@ -72,6 +73,16 @@ func InitConfig() {
 	} else if err != nil {
 		log.Fatal(err)
 	}
+
+	// Parse Temp Dir
+	Config.TempDir, err = c.GetString("", "tempdir")
+	if (err != nil && err.(goconf.GetError).Reason == goconf.OptionNotFound) || Config.TempDir == "" {
+		Config.TempDir = os.TempDir()
+	} else if err != nil {
+		log.Fatal(err)
+	}
+	// Normalize tempdir string
+	Config.TempDir = strings.TrimRight(Config.TempDir, "/")
 
 	// Parse Github settings
 	if c.HasSection("github") {
