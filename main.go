@@ -224,7 +224,7 @@ func handleView(path []string, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("Accept") == "application/json" {
-		w.Header.Add("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		jbytes, err := json.MarshalIndent(event, " ", "  ")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -232,7 +232,7 @@ func handleView(path []string, w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(jbytes)
 	} else { // Serve HTML
-		w.Header.Add("Content-Type", "text/html; charset=UTF-8")
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 		ansi2html, err := ANSI2HTML(event.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -258,7 +258,7 @@ func handleIndex(path []string, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("Accept") == "application/json" {
-		w.Header.Add("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		jbytes, err := json.MarshalIndent(events, " ", "  ")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -266,7 +266,7 @@ func handleIndex(path []string, w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(jbytes)
 	} else {
-		w.Header.Add("Content-Type", "text/html; charset=UTF-8")
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 		fmt.Fprintln(w, "<html><body style='background-color:black; color:white'><table style='width:100%'>")
 		for _, event := range events {
 			fmt.Fprintln(w, "<tr>")
