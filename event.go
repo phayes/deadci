@@ -154,7 +154,10 @@ func (e *Event) Finalize(status string, err error) error {
 	}
 
 	e.Status = status
-	return e.Update()
+	err = e.Update()
+	if err != nil {
+		return err
+	}
 
 	// Send the report to the provider
 	err = e.Report()
