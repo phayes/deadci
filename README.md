@@ -17,7 +17,7 @@ Github payload URL: http://example.com/postreceive
 
 Building from source
 ```bash
-$ sudo apt-get install golang                    # Download go. Alternativly build from source: https://golang.org/doc/install/source
+$ sudo apt-get install golang git mercurial      # Download go. Alternativly build from source: https://golang.org/doc/install/source
 $ mkdir ~/.gopath && export GOPATH=~/.gopath     # Replace with desired GOPATH
 $ export PATH=$PATH:$GOPATH/bin                  # For convenience, add go's bin dir to your PATH
 $ go get github.com/phayes/deadci                # Download source and compile
