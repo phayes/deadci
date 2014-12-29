@@ -17,9 +17,9 @@ const tableDef = `(
 	'repo' text NOT NULL,
 	'branch' text NOT NULL,
 	'commit' text NOT NULL,
-	'baseowner' text, 
-	'baserepo' text, 
-	'basebranch' text, 
+	'baseowner' text NOT NULL, 
+	'baserepo' text NOT NULL, 
+	'basebranch' text NOT NULL, 
 	'log' blob
 )`
 
@@ -121,13 +121,7 @@ func (e *Event) Insert() error {
 		return errors.New("Cannot Insert event with an ID. Use Update()")
 	}
 
-	var res sql.Result
-	var err error
-	if e.Type == "push" {
-		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :log)", e)
-	} else if e.Type == "pull_request" {
-		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, baseowner, baserepo, basebranch, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :baseowner, :baserepo, :basebranch, :log)", e)
-	}
+	res, err := DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, baseowner, baserepo, basebranch, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :baseowner, :baserepo, :basebranch, :log)", e)
 	if err != nil {
 		return err
 	} else {
@@ -145,12 +139,7 @@ func (e *Event) Update() error {
 	if e.ID == 0 {
 		return errors.New("Cannot update event with no ID. Use Insert()")
 	}
-	var err error
-	if e.Type == "push" {
-		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, log = :log WHERE id= :id", e)
-	} else if e.Type == "pull_request" {
-		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, baseowner = :baseowner, baserepo = :baserepo, basebranch = :basebranch, log = :log WHERE id= :id", e)
-	}
+	_, err := DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, baseowner = :baseowner, baserepo = :baserepo, basebranch = :basebranch, log = :log WHERE id= :id", e)
 	if err != nil {
 		return err
 	} else {
