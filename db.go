@@ -11,11 +11,15 @@ const tableDef = `(
 	'id' INTEGER PRIMARY KEY AUTOINCREMENT,
 	'time' timestamp default CURRENT_TIMESTAMP,
 	'status' text NOT NULL,
+	'type' text NOT NULL, 
 	'domain' text NOT NULL,
 	'owner' text NOT NULL,
 	'repo' text NOT NULL,
 	'branch' text NOT NULL,
 	'commit' text NOT NULL,
+	'base_owner' text, 
+	'base_repo' text, 
+	'base_branch' text, 
 	'log' blob
 )`
 
@@ -116,7 +120,14 @@ func (e *Event) Insert() error {
 	if e.ID != 0 {
 		return errors.New("Cannot Insert event with an ID. Use Update()")
 	}
-	res, err := DB.NamedExec("INSERT INTO deadci (time,status,domain,owner, repo, branch, `commit`, log) VALUES(:time, :status, :domain, :owner, :repo, :branch, :commit, :log)", e)
+
+	var res sql.Result
+	var err error
+	if e.Type == "push" {
+		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :log)", e)
+	} else if e.Type == "pull_request" {
+		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, base_owner, base_repo, base_branch, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :base_owner, :base_repo, :base_branch, :log)", e)
+	}
 	if err != nil {
 		return err
 	} else {
@@ -134,7 +145,12 @@ func (e *Event) Update() error {
 	if e.ID == 0 {
 		return errors.New("Cannot update event with no ID. Use Insert()")
 	}
-	_, err := DB.NamedExec("UPDATE deadci SET time = :time , status = :status, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, log = :log WHERE id= :id", e)
+	var err error
+	if e.Type == "push" {
+		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, log = :log WHERE id= :id", e)
+	} else if e.Type == "pull_request" {
+		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, base_owner = :base_owner, base_repo = :base_repo, base_branch = :base_branch, log = :log WHERE id= :id", e)
+	}
 	if err != nil {
 		return err
 	} else {

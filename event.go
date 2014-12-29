@@ -203,7 +203,13 @@ func (e *Event) ReportGitHub() error {
 	}
 
 	client := github.NewClient(t.Client())
-	_, _, err := client.Repositories.CreateStatus(e.Owner, e.Repo, e.Commit, repoStatus)
+
+	var err error
+	if e.Type == "push" {
+		_, _, err = client.Repositories.CreateStatus(e.Owner, e.Repo, e.Commit, repoStatus)
+	} else if e.Type == "pull_request" {
+		_, _, err = client.Repositories.CreateStatus(e.BaseOwner, e.BaseRepo, e.Commit, repoStatus)
+	}
 	if err != nil {
 		return err
 	}
@@ -212,7 +218,13 @@ func (e *Event) ReportGitHub() error {
 	if status == StatusFailed {
 		commentStr := "DeadCI - build " + e.Status + ": " + desc + "\n" + "For details please see: " + e.FullURL()
 		comment := &github.RepositoryComment{Body: &commentStr}
-		_, _, err := client.Repositories.CreateComment(e.Owner, e.Repo, e.Commit, comment)
+
+		var err error
+		if e.Type == "push" {
+			_, _, err = client.Repositories.CreateComment(e.Owner, e.Repo, e.Commit, comment)
+		} else if e.Type == "pull_request" {
+			_, _, err = client.Repositories.CreateComment(e.BaseOwner, e.BaseRepo, e.Commit, comment)
+		}
 		if err != nil {
 			return err
 		}
