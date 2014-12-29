@@ -17,9 +17,9 @@ const tableDef = `(
 	'repo' text NOT NULL,
 	'branch' text NOT NULL,
 	'commit' text NOT NULL,
-	'base_owner' text, 
-	'base_repo' text, 
-	'base_branch' text, 
+	'baseowner' text, 
+	'baserepo' text, 
+	'basebranch' text, 
 	'log' blob
 )`
 
@@ -126,7 +126,7 @@ func (e *Event) Insert() error {
 	if e.Type == "push" {
 		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :log)", e)
 	} else if e.Type == "pull_request" {
-		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, base_owner, base_repo, base_branch, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :base_owner, :base_repo, :base_branch, :log)", e)
+		res, err = DB.NamedExec("INSERT INTO deadci (time,status,`type`,domain,owner, repo, branch, `commit`, baseowner, baserepo, basebranch, log) VALUES(:time, :status, :type, :domain, :owner, :repo, :branch, :commit, :baseowner, :baserepo, :basebranch, :log)", e)
 	}
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (e *Event) Update() error {
 	if e.Type == "push" {
 		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, log = :log WHERE id= :id", e)
 	} else if e.Type == "pull_request" {
-		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, base_owner = :base_owner, base_repo = :base_repo, base_branch = :base_branch, log = :log WHERE id= :id", e)
+		_, err = DB.NamedExec("UPDATE deadci SET time = :time , status = :status, `type` = :type, domain = :domain, owner = :owner, repo = :repo, branch = :branch, `commit` = :commit, baseowner = :baseowner, baserepo = :baserepo, basebranch = :basebranch, log = :log WHERE id= :id", e)
 	}
 	if err != nil {
 		return err
