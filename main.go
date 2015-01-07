@@ -165,6 +165,7 @@ func handleReRun(path []string, w http.ResponseWriter, r *http.Request) {
 				Repo:   path[2],
 				Branch: path[3],
 				Commit: path[4],
+				Type:   "push",
 			},
 			Domain: "github.com", // For now we only support github
 			Status: StatusPending,
