@@ -280,8 +280,17 @@ func handleIndex(path []string, w http.ResponseWriter, r *http.Request) {
 
 func parsePath(path string) ([]string, error) {
 	parts := strings.Split(path, "/")
-	if len(parts) > 6 {
-		return nil, errors.New("Invalid Path")
+	// If we have more than 6 parts, then we are trying to access a branch with a slash in it
+	// as only part that is allowed to have a slash in it is the branch name
+	if numparts := len(parts); numparts > 6 {
+		rawparts := parts
+		parts = make([]string, 6)
+		parts[0] = rawparts[0]                               // root
+		parts[1] = rawparts[1]                               // domain
+		parts[2] = rawparts[2]                               // user
+		parts[3] = rawparts[3]                               // repo
+		parts[4] = strings.Join(rawparts[4:numparts-1], "/") // branch
+		parts[5] = rawparts[numparts-1]                      // commit
 	}
 	// Filter illigal characters
 	for _, part := range parts {
