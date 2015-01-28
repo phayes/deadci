@@ -37,6 +37,9 @@ func InitDB() {
 	DB.MustExec("CREATE INDEX IF NOT EXISTS repo_index on deadci (domain, owner, repo)")
 	DB.MustExec("CREATE INDEX IF NOT EXISTS branch_index on deadci (domain, owner, repo, branch)")
 	DB.MustExec("CREATE UNIQUE INDEX IF NOT EXISTS combined_index on deadci (domain, owner, repo, branch, `commit`)")
+
+	// Upon start-up, anything that is set to "running" should be moved to "pending"
+	DB.MustExec("UPDATE deadci SET status = 'pending' WHERE status = 'running'")
 }
 
 // Get a pending event, mark it as running
