@@ -50,15 +50,15 @@ func main() {
 				} else if event != nil {
 					err = event.Report()
 					if err != nil {
+						// If we can't update the status on the source-control system, then just log it and continue
+						event.Log = append(event.Log, []byte(err.Error()+"\n")...)
+						event.Update()
 						log.Println(err)
-					} else {
-						go func() {
-							status, err := event.Run()
-							err = event.Finalize(status, err)
-							if err != nil {
-								log.Println(err)
-							}
-						}()
+					}
+					status, err := event.Run()
+					err = event.Finalize(status, err)
+					if err != nil {
+						log.Println(err)
 					}
 				}
 				time.Sleep(50 * time.Millisecond)
