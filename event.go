@@ -63,6 +63,9 @@ func (e *Event) Run() (string, error) {
 
 	// Clone repo
 	cmdClone := exec.Command("git", "clone", "git@"+e.Domain+":"+e.Owner+"/"+e.Repo+".git")
+	if Config.HttpsClone == true {
+		cmdClone = exec.Command("git", "clone", "https://"+e.Domain+"/"+e.Owner+"/"+e.Repo+".git")
+	}
 	cmdClone.Dir = Config.TempDir + "/deadci/" + e.Path()
 	cmdCloneOut, err := cmdClone.CombinedOutput()
 	e.Log = append(e.Log, cmdCloneOut...)

@@ -20,6 +20,7 @@ var Config struct {
 		Token   string
 		Secret  string
 	}
+	HttpsClone bool
 }
 
 func init() {
@@ -100,6 +101,12 @@ func InitConfig() {
 				log.Fatal(err)
 			}
 		}
+	}
+
+	// Parse clone style (git or https)
+	Config.HttpsClone, err = c.GetBool("", "httpsclone")
+	if err != nil && err.(goconf.GetError).Reason != goconf.OptionNotFound {
+		log.Fatal(err)
 	}
 
 }
