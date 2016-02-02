@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	"sync"
 )
 
 const tableDef = `(
@@ -24,7 +25,8 @@ const tableDef = `(
 )`
 
 var (
-	DB *sqlx.DB
+	DB          *sqlx.DB
+	PopEventMux = &sync.Mutex{}
 )
 
 // Bootstrap database
@@ -44,8 +46,10 @@ func InitDB() {
 
 // Get a pending event, mark it as running
 func PopEvent() (*Event, error) {
-	event := Event{}
+	PopEventMux.Lock()
+	defer PopEventMux.Unlock()
 
+	event := Event{}
 	err := DB.Get(&event, "SELECT * FROM deadci WHERE status = 'pending' ORDER BY id ASC LIMIT 1")
 	if err != nil {
 		if err == sql.ErrNoRows {
