@@ -1,10 +1,10 @@
 package main
 
 import (
-	"code.google.com/p/goauth2/oauth"
 	"encoding/json"
 	"github.com/google/go-github/github"
 	"github.com/phayes/hookserve/hookserve"
+	"golang.org/x/oauth2"
 	"io"
 	"os"
 	"os/exec"
@@ -189,9 +189,11 @@ func (e *Event) ReportGitHub() error {
 	}
 
 	// Create the authorization transport
-	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: Config.Github.Token},
-	}
+	t := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: Config.Github.Token},
+	)
+	tc := oauth2.NewClient(oauth2.NoContext, t)
+	client := github.NewClient(tc)
 
 	status := e.TranslateStatus()
 	desc := e.StatusDescription()
@@ -201,8 +203,6 @@ func (e *Event) ReportGitHub() error {
 		TargetURL:   &url,
 		Description: &desc,
 	}
-
-	client := github.NewClient(t.Client())
 
 	var err error
 	if e.Type == "push" {
