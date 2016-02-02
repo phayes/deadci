@@ -88,7 +88,23 @@ func (e *Event) Run() (string, error) {
 	}
 	cmd.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "DEADCI_DOMAIN="+e.Domain, "DEADCI_OWNER="+e.Owner, "DEADCI_REPO="+e.Repo, "DEADCI_BRANCH="+e.Branch, "DEADCI_COMMIT="+e.Commit)
+	cmd.Env = append(
+		cmd.Env,
+		"DEADCI_DOMAIN="+e.Domain,
+		"DEADCI_OWNER="+e.Owner,
+		"DEADCI_REPO="+e.Repo,
+		"DEADCI_BRANCH="+e.Branch,
+		"DEADCI_COMMIT="+e.Commit,
+		"DEADCI_TYPE="+e.Type,
+	)
+	if e.Type == "pull_request" {
+		cmd.Env = append(
+			cmd.Env,
+			"DEADCI_BASEOWNER="+e.BaseOwner,
+			"DEADCI_BASEREPO="+e.BaseRepo,
+			"DEADCI_BASEBRANCH="+e.BaseBranch,
+		)
+	}
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
 		return StatusFailedBoot, err
