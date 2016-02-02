@@ -11,7 +11,12 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	ReRunMux = sync.Mutex{}
 )
 
 func main() {
@@ -61,53 +66,53 @@ func main() {
 						log.Println(err)
 					}
 				}
-				time.Sleep(50 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 		}()
 	}
 
-	// Loop for adding new events to the queue
-	for {
-		select {
-		case commit := <-githubreceive.Events:
-			event := Event{
-				Event:  commit,
-				Domain: "github.com", // For now we only support github
-				Status: StatusPending,
-				Time:   time.Now(),
-			}
+	// Add new events to the queue as they come in
+	for commit := range githubreceive.Events {
+		// Only run tets on pull-requests if there is new code to test
+		if commit.Type == "pull_request" && (commit.Action != "synchronize" && commit.Action != "opened") {
+			continue
+		}
 
-			// First check to see if the event already exists, and if it is reque it if it's not running
-			checkEvent, err := GetEvent(event.Domain, event.Owner, event.Repo, event.Branch, event.Commit)
+		event := Event{
+			Event:  commit,
+			Domain: "github.com", // For now we only support github
+			Status: StatusPending,
+			Time:   time.Now(),
+		}
+
+		// First check to see if the event already exists, and if it is reque it if it's not running
+		checkEvent, err := GetEvent(event.Domain, event.Owner, event.Repo, event.Branch, event.Commit)
+		if err != nil {
+			log.Println(err)
+		}
+		if checkEvent != nil {
+			// It's an old event, requeue it if we can
+			if checkEvent.Status != StatusRunning {
+				checkEvent.Status = StatusPending
+				err = checkEvent.Update()
+				if err != nil {
+					log.Println(err)
+				}
+				err = checkEvent.Report()
+				if err != nil {
+					log.Println(err)
+				}
+			}
+		} else {
+			// It's a new event, insert it anew
+			err = event.Insert()
 			if err != nil {
 				log.Println(err)
 			}
-			if checkEvent != nil {
-				// It's an old event, requeue it if we can
-				if checkEvent.Status != StatusRunning {
-					checkEvent.Status = StatusPending
-					err = checkEvent.Update()
-					if err != nil {
-						log.Println(err)
-					}
-					err = checkEvent.Report()
-					if err != nil {
-						log.Println(err)
-					}
-				}
-			} else {
-				// It's a new event, insert it anew
-				err = event.Insert()
-				if err != nil {
-					log.Println(err)
-				}
-				err = event.Report()
-				if err != nil {
-					log.Println(err)
-				}
+			err = event.Report()
+			if err != nil {
+				log.Println(err)
 			}
-		default:
-			time.Sleep(50 * time.Millisecond)
 		}
 	}
 }
@@ -142,6 +147,9 @@ func handleUI(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleReRun(path []string, w http.ResponseWriter, r *http.Request) {
+	ReRunMux.Lock()
+	defer ReRunMux.Unlock()
+
 	if len(path) != 5 {
 		http.NotFound(w, r)
 		return
