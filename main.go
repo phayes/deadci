@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang/glog"
 	"github.com/phayes/hookserve/hookserve"
 	"io"
 	"log"
@@ -25,7 +26,7 @@ func main() {
 	InitConfig()
 	InitDB()
 	InitANSI2HTML()
-
+	glog.Info("starting main thread.")
 	// Set up HTTP paths
 	githubreceive := hookserve.NewServer()
 	if Config.Github.Enabled {

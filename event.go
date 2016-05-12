@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/google/go-github/github"
 	"github.com/phayes/hookserve/hookserve"
+	"github.com/golang/glog"
 	"golang.org/x/oauth2"
 	"io"
 	"os"
@@ -48,7 +49,7 @@ func (e *Event) Run() (string, error) {
 	if e.Status != StatusRunning {
 		panic("Event should have it status set to `running` before calling Run()")
 	}
-
+    glog.Info("Run event " + e.FullURL())
 	// Clean the scratch space
 	err := os.RemoveAll(Config.TempDir + "/deadci/" + e.Path())
 	if err != nil {
@@ -62,8 +63,10 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Clone repo
+	glog.Info("Cloning repositories."+e.Owner+"/"+e.Repo)
 	cmdClone := exec.Command("git", "clone", "git@"+e.Domain+":"+e.Owner+"/"+e.Repo+".git")
 	cmdClone.Dir = Config.TempDir + "/deadci/" + e.Path()
+	glog.Info("temp directory: " + cmdClone.Dir)
 	cmdCloneOut, err := cmdClone.CombinedOutput()
 	e.Log = append(e.Log, cmdCloneOut...)
 	if err != nil {
@@ -74,6 +77,7 @@ func (e *Event) Run() (string, error) {
 	cmdCheckout := exec.Command("git", "checkout", "-q", e.Commit)
 	cmdCheckout.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmdCheckoutOut, err := cmdCheckout.CombinedOutput()
+	glog.Info(cmdCheckout.CombinedOutput())
 	e.Log = append(e.Log, cmdCheckoutOut...)
 	if err != nil {
 		return StatusFailedBoot, err
@@ -137,7 +141,7 @@ func (e *Event) Run() (string, error) {
 			}
 		}
 		e.Log = append(e.Log, stdoutbuff[:n]...)
-
+		glog.Info(string(stdoutbuff[:n]))
 		// stderr
 		n, err = stderrPipe.Read(stderrbuff)
 		if err != nil {
