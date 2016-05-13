@@ -4,19 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/phayes/hookserve/hookserve"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/phayes/hookserve/hookserve"
 )
 
 var (
-	ReRunMux = sync.Mutex{}
+	ReRunMux   = sync.Mutex{}
+	InShutdown = false
 )
 
 func main() {
@@ -66,10 +71,51 @@ func main() {
 						log.Println(err)
 					}
 				}
+
+				// Wait 100 ms then check again
 				time.Sleep(100 * time.Millisecond)
+
+				// If we are shutting down, stop processing
+				if InShutdown {
+					return
+				}
 			}
 		}()
 	}
+
+	// Handle a sigint to gracefully shutdown
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGINT)
+	go func() {
+		for _ = range sigint {
+			log.Println("Got shutdown signal. Will shutdown when actively running jobs are finished. To shutdown immidaitely, use sigquit.")
+			InShutdown = true
+			// Wait until we have no running jobs then shut down.
+			for {
+				numEvents, err := NumEvent("running")
+				if err != nil {
+					log.Fatal(err)
+				}
+				if numEvents == 0 {
+					log.Println("Shutting down")
+					os.Exit(0)
+				} else {
+					// Wait 100 ms then check again
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
+		}
+	}()
+
+	// Handle a sigquit to shut down immidiately
+	sigquit := make(chan os.Signal, 1)
+	signal.Notify(sigquit, syscall.SIGQUIT)
+	go func() {
+		for _ = range sigquit {
+			log.Println("Got quit signal. Shutting down immidaitely. To shutdown gracefully, use sigint.")
+			os.Exit(1)
+		}
+	}()
 
 	// Add new events to the queue as they come in
 	for commit := range githubreceive.Events {
