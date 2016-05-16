@@ -3,9 +3,10 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"sync"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"sync"
 )
 
 const tableDef = `(
@@ -152,4 +153,14 @@ func (e *Event) Update() error {
 	} else {
 		return nil
 	}
+}
+
+// NumEvent gets the number of events that have the given status
+func NumEvent(status string) (int, error) {
+	var num int
+	err := DB.QueryRowx("SELECT COUNT(*) FROM deadci WHERE status = ?", status).Scan(&num)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
