@@ -1,0 +1,12 @@
+{
+	"x": 1,
+	"result": {"y": "abc\tdef"}
+}
+{
+	"x": 2,
+	"result": false
+}
+{
+	"x": 2,
+	"result": null
+}
