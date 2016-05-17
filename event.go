@@ -2,15 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/google/go-github/github"
-	"github.com/phayes/hookserve/hookserve"
-	"github.com/golang/glog"
-	"golang.org/x/oauth2"
 	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/google/go-github/github"
+	"github.com/phayes/hookserve/hookserve"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -49,7 +50,7 @@ func (e *Event) Run() (string, error) {
 	if e.Status != StatusRunning {
 		panic("Event should have it status set to `running` before calling Run()")
 	}
-    glog.Info("Run event " + e.FullURL())
+	glog.Info("Run event " + e.FullURL())
 	// Clean the scratch space
 	err := os.RemoveAll(Config.TempDir + "/deadci/" + e.Path())
 	if err != nil {
@@ -63,7 +64,7 @@ func (e *Event) Run() (string, error) {
 	}
 
 	// Clone repo
-	glog.Info("Cloning repositories."+e.Owner+"/"+e.Repo)
+	glog.Info("Cloning repositories." + e.Owner + "/" + e.Repo)
 	cmdClone := exec.Command("git", "clone", "git@"+e.Domain+":"+e.Owner+"/"+e.Repo+".git")
 	if Config.HttpsClone == true {
 		cmdClone = exec.Command("git", "clone", "https://"+e.Domain+"/"+e.Owner+"/"+e.Repo+".git")

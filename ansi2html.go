@@ -7,6 +7,7 @@ import (
 	"os/exec"
 )
 
+// ANSI2HTML transforms coloured ANSI console output into coloured HTML
 func ANSI2HTML(ansi string) (io.ReadCloser, error) {
 	// Run the results through html2ansi script
 	html2ansi := exec.Command("sh", Config.DataDir+"/ansi2html.sh", "--bg=dark")
@@ -35,7 +36,7 @@ func ANSI2HTML(ansi string) (io.ReadCloser, error) {
 	return out, nil
 }
 
-// Write the ansi2html script out to a file so it can be used
+// InitANSI2HTML writes the ansi2html script out to a file so it can be used
 // @@TODO: We really ought to have an ansi2html golang library, but it doesn't exist yet
 func InitANSI2HTML() {
 	err := ioutil.WriteFile(Config.DataDir+"/ansi2html.sh", []byte(ansi2htmlScript), 0700)

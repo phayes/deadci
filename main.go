@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"io"
 	"log"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/phayes/hookserve/hookserve"
 )
 
@@ -31,7 +31,7 @@ func main() {
 	InitConfig()
 	InitDB()
 	InitANSI2HTML()
-	glog.Info("starting main thread.")
+	glog.Info("Starting up.")
 	// Set up HTTP paths
 	githubreceive := hookserve.NewServer()
 	if Config.Github.Enabled {
@@ -89,7 +89,7 @@ func main() {
 	signal.Notify(sigint, syscall.SIGINT)
 	go func() {
 		for _ = range sigint {
-			log.Println("Got shutdown signal. Will shutdown when actively running jobs are finished. To shutdown immidaitely, use sigquit.")
+			fmt.Println("Got shutdown signal. Will shutdown when actively running jobs are finished. To shutdown immidaitely, use sigquit.")
 			InShutdown = true
 			// Wait until we have no running jobs then shut down.
 			for {
@@ -113,7 +113,7 @@ func main() {
 	signal.Notify(sigquit, syscall.SIGQUIT)
 	go func() {
 		for _ = range sigquit {
-			log.Println("Got quit signal. Shutting down immidaitely. To shutdown gracefully, use sigint.")
+			fmt.Println("Got quit signal. Shutting down immidaitely. To shutdown gracefully, use sigint.")
 			os.Exit(1)
 		}
 	}()

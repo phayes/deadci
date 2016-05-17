@@ -3,14 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/dlintw/goconf"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/dlintw/goconf"
 )
 
 var Config struct {
 	DataDir string
+	IniFile string
 	TempDir string
 	Command []string
 	Port    int
@@ -25,8 +27,10 @@ var Config struct {
 
 func init() {
 	flag.StringVar(&Config.DataDir, "data-dir", "", "Data directory where config is stored. Must be writable.")
+	flag.StringVar(&Config.IniFile, "config", "", "Direct path to deadci.ini if config is not stored in data directory.")
 }
 
+// InitConfig loads the config on startup
 func InitConfig() {
 	flag.Parse()
 
@@ -39,9 +43,12 @@ func InitConfig() {
 	Config.DataDir = strings.TrimRight(Config.DataDir, "/ ")
 
 	// Read the config file
-	c, err := goconf.ReadConfigFile(Config.DataDir + "/deadci.ini")
+	if Config.IniFile == "" {
+		Config.IniFile = Config.DataDir + "/deadci.ini"
+	}
+	c, err := goconf.ReadConfigFile(Config.IniFile)
 	if err != nil {
-		log.Fatal(err.Error() + ". Please ensure that your deadci.ini file is readable and in place at " + Config.DataDir + "/deadci.ini")
+		log.Fatal(err.Error() + ". Please ensure that your deadci.ini file is readable and in place at " + Config.IniFile)
 	}
 
 	// Parse command
