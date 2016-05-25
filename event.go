@@ -77,8 +77,16 @@ func (e *Event) Run() (string, error) {
 		return StatusFailedBoot, err
 	}
 
-	// Check out correct commit
-	cmdCheckout := exec.Command("git", "checkout", "-q", e.Commit)
+	// Check out correct commit 
+	cmdCheckoutBranch := exec.Command("git", "checkout", "-q", e.Branch)
+	cmdCheckoutBranch.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
+	cmdCheckoutBranchOut, err := cmdCheckoutBranch.CombinedOutput()
+	glog.Info(cmdCheckoutBranch.CombinedOutput())
+	e.Log = append(e.Log, cmdCheckoutBranchOut...)
+	if err != nil {
+		return StatusFailedBoot, err
+	}
+	cmdCheckout := exec.Command("git", "reset", "-q", "--hard", e.Commit)
 	cmdCheckout.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmdCheckoutOut, err := cmdCheckout.CombinedOutput()
 	glog.Info(cmdCheckout.CombinedOutput())
