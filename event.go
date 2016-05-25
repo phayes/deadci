@@ -77,8 +77,7 @@ func (e *Event) Run() (string, error) {
 		return StatusFailedBoot, err
 	}
 
-	// Check out correct commit
-	//cmdCheckout := exec.Command("git", "checkout", "-q", e.Commit)
+	// Check out correct commit 
 	cmdCheckoutBranch := exec.Command("git", "checkout", "-q", e.Branch)
 	cmdCheckoutBranch.Dir = Config.TempDir + "/deadci/" + e.Path() + "/" + e.Repo
 	cmdCheckoutBranchOut, err := cmdCheckoutBranch.CombinedOutput()
@@ -118,7 +117,7 @@ func (e *Event) Run() (string, error) {
 		cmd.Env = append(
 			cmd.Env,
 			"DEADCI_BASEOWNER="+e.BaseOwner,
-			"DEADCI_BASE REPO="+e.BaseRepo,
+			"DEADCI_BASEREPO="+e.BaseRepo,
 			"DEADCI_BASEBRANCH="+e.BaseBranch,
 		)
 	}
